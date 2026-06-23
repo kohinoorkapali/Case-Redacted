@@ -1,0 +1,300 @@
+"""
+core/interactions.py — Interaction and puzzle logic.
+
+Handles what happens when the player presses E near an object, what
+each puzzle does when a button is clicked, etc.
+
+Functions receive *state* (GameState) and mutate it directly.
+"""
+from __future__ import annotations
+
+import math
+import pygame
+
+from settings import DOOR_CODE, ACCENT2, RED, DIM
+from data.rooms import ROOM_A, ROOM_B
+from data.puzzle_data import MAG_IMAGES, UV_SPOTS, DOC_LINES, READINGS
+from ui.overlays import keypad_button_layout, doc_line_layout, tool_close_rect
+
+
+# ── Overlay open/close ────────────────────────────────────────────────────────
+
+def open_reading(state, title: str, meta: str, body: str) -> None:
+    state.reading       = {"title": title, "meta": meta, "body": body}
+    state.active_overlay= "reading"
+    state.input_locked  = True
+
+
+def close_any_overlay(state) -> None:
+    state.active_overlay= None
+    state.input_locked  = False
+
+
+# ── Collision + room transitions ──────────────────────────────────────────────
+
+def can_move(state, nx: float, ny: float) -> bool:
+    p   = state.player
+    box = pygame.Rect(int(nx), int(ny), p.w, p.h)
+    for w in state.current_room["walls"]:
+        if box.colliderect(w):
+            return False
+    if state.current_room is ROOM_A and not state.flags["doorUnlocked"]:
+        if box.colliderect(state.current_room["door"]):
+            return False
+    if state.current_room is ROOM_B:
+        if box.colliderect(state.current_room["door"]):
+            return False
+    return True
+
+
+def check_room_transitions(state) -> None:
+    p     = state.player
+    prect = p.rect
+    if state.current_room is ROOM_A and state.flags["doorUnlocked"]:
+        if prect.colliderect(pygame.Rect(0, 380, 60, 140)):
+            _enter_room_b(state)
+    elif state.current_room is ROOM_B:
+        if prect.colliderect(pygame.Rect(1540, 380, 60, 140)):
+            state.current_room = ROOM_A
+            state.player.teleport(100.0, 430.0)
+
+
+def _enter_room_b(state) -> None:
+    state.player.teleport(80.0, 430.0)
+    state.flags["doorUnlocked"] = True
+    state.current_room          = ROOM_B
+
+
+# ── Nearby object detection ───────────────────────────────────────────────────
+
+def find_nearby(state) -> dict | None:
+    reach = state.player.reach_rect
+    for o in state.current_room["objects"]:
+        if reach.colliderect(pygame.Rect(o["x"], o["y"], o["w"], o["h"])):
+            return o
+    if state.current_room is ROOM_A and reach.colliderect(state.current_room["door"]):
+        return {
+            "id":    "doorA",
+            "label": "Open Door" if state.flags["doorUnlocked"] else "Locked Door",
+            "kind":  "doorA",
+        }
+    if state.current_room is ROOM_B and reach.colliderect(state.current_room["door"]):
+        return {"id": "doorB", "label": "Return to Office", "kind": "doorB"}
+    return None
+
+
+# ── Interact dispatcher ───────────────────────────────────────────────────────
+
+def try_interact(state) -> None:
+    if state.input_locked:
+        return
+    o = find_nearby(state)
+    if not o:
+        return
+    if state.current_room is ROOM_A:
+        _handle_room_a(state, o)
+    elif state.current_room is ROOM_B:
+        _handle_room_b(state, o)
+
+
+def _handle_room_a(state, o: dict) -> None:
+    kind = o["kind"]
+    if kind == "paper-floor":
+        r = READINGS["newspaper"]
+        open_reading(state, r["title"], r["meta"], r["body"])
+        state.flags["readNewspaper"] = True
+    elif kind == "whiteboard":
+        r = READINGS["whiteboard"]
+        open_reading(state, r["title"], r["meta"], r["body"])
+        state.flags["sawWhiteboard"] = True
+    elif kind == "desk":
+        state.flags["sawDesk"] = True
+        open_journal(state)
+    elif kind == "doorA":
+        if state.flags["doorUnlocked"]:
+            _enter_room_b(state)
+        else:
+            _open_keypad(state)
+
+
+def _handle_room_b(state, o: dict) -> None:
+    kind = o["kind"]
+    if kind == "photoboard":
+        state.tool           = {"mode": "magnifier", "mag_idx": 0, "reveal": ""}
+        state.active_overlay = "tool"
+        state.input_locked   = True
+    elif kind == "uv":
+        state.tool           = {"mode": "uv", "mag_idx": 0, "reveal": ""}
+        state.active_overlay = "tool"
+        state.input_locked   = True
+    elif kind == "docfiles":
+        state.doc_selected   = set()
+        state.doc_msg        = ""
+        state.active_overlay = "doc"
+        state.input_locked   = True
+    elif kind == "cassette":
+        r = READINGS["cassette"]
+        open_reading(state, r["title"], r["meta"], r["body"])
+    elif kind == "herring":
+        open_reading(state, o["label"].upper(), "NOTHING USEFUL", o["text"])
+    elif kind == "doorB":
+        state.current_room = ROOM_A
+        state.player.teleport(100.0, 430.0)
+
+
+# ── Keypad puzzle ─────────────────────────────────────────────────────────────
+
+def _open_keypad(state) -> None:
+    state.keypad = {
+        "code":       "",
+        "hint":       "" if state.flags["sawDesk"] else "Something feels inverted\u2026",
+        "submit_at":  None,
+        "close_at":   None,
+        "clear_at":   None,
+        "shake_until":0,
+    }
+    state.active_overlay = "keypad"
+    state.input_locked   = True
+
+
+def click_keypad(state, pos: tuple) -> None:
+    for label, rect_ in keypad_button_layout():
+        if rect_.collidepoint(pos):
+            if label == "C":
+                state.keypad["code"] = ""
+            elif label == "OK":
+                _submit_code(state)
+            else:
+                _press_digit(state, label)
+            return
+    cancel = pygame.Rect(GAME_W // 2 - 70, 740, 140, 36)
+    if cancel.collidepoint(pos):
+        close_any_overlay(state)
+
+
+def _press_digit(state, d: str) -> None:
+    kp = state.keypad
+    if len(kp["code"]) >= 3:
+        return
+    kp["code"] += d
+    if len(kp["code"]) == 3:
+        kp["submit_at"] = pygame.time.get_ticks() + 150
+
+
+def _submit_code(state) -> None:
+    kp  = state.keypad
+    now = pygame.time.get_ticks()
+    if kp["code"] == DOOR_CODE:
+        kp["hint"]                  = "CLICK."
+        state.flash_until            = now + 90
+        kp["close_at"]              = now + 350
+        state.flags["doorUnlocked"] = True   # unlock so player can walk through
+    else:
+        kp["shake_until"] = now + 400
+        kp["hint"]        = "Something feels inverted\u2026"
+        kp["clear_at"]    = now + 400
+
+
+# ── Tool panel clicks ─────────────────────────────────────────────────────────
+
+def click_tool(state, pos: tuple) -> None:
+    if tool_close_rect().collidepoint(pos):
+        close_any_overlay(state)
+        return
+    from data.puzzle_data import TOOL_RECT
+    if not TOOL_RECT.collidepoint(pos):
+        return
+    mx = pos[0] - TOOL_RECT.x
+    my = pos[1] - TOOL_RECT.y
+    if state.tool["mode"] == "magnifier":
+        _click_magnifier(state, mx, my)
+    elif state.tool["mode"] == "uv":
+        _click_uv(state, mx, my)
+
+
+def _click_magnifier(state, mx: float, my: float) -> None:
+    dist = math.hypot(mx - 450, my - 280)
+    if dist < 90 and state.flags["magCount"] < 3:
+        state.flags["magCount"] += 1
+        idx = state.tool["mag_idx"]
+        state.tool["reveal"] = MAG_IMAGES[idx]["reveal"]
+        if state.flags["magCount"] >= 3:
+            state.tool["reveal"] = "\u201cSomething in these photos doesn't match the report\u2026\u201d"
+        state.tool["mag_idx"] = (idx + 1) % len(MAG_IMAGES)
+
+
+def _click_uv(state, mx: float, my: float) -> None:
+    for s in UV_SPOTS:
+        d = math.hypot(mx - s["x"], my - s["y"])
+        if d < 60 and s["text"] not in state.flags["uvFound"]:
+            state.flags["uvFound"].add(s["text"])
+            prefix = "[TRUE] " if s["true"] else "[UNCONFIRMED] "
+            state.tool["reveal"] = prefix + "\u201c" + s["text"] + "\u201d"
+
+
+# ── Document puzzle ───────────────────────────────────────────────────────────
+
+def click_doc(state, pos: tuple) -> None:
+    panel, rects = doc_line_layout(state)
+    for d, rect_, _lines in rects:
+        if rect_.collidepoint(pos):
+            if d["id"] in state.doc_selected:
+                state.doc_selected.discard(d["id"])
+            else:
+                state.doc_selected.add(d["id"])
+            return
+    submit = pygame.Rect(panel.x + 36, panel.bottom - 70, 240, 40)
+    if submit.collidepoint(pos):
+        _submit_doc(state)
+
+
+def _submit_doc(state) -> None:
+    correct_ids = {d["id"] for d in DOC_LINES if d["correct"]}
+    if state.doc_selected == correct_ids:
+        state.doc_msg_color = ACCENT2
+        state.doc_msg       = (
+            "These lines hold together. The truth: Arthur reopened case 2-4-7 "
+            "alone, the night someone else came for the file."
+        )
+        state.flags["docSolved"] = True
+        state.end_card_at        = pygame.time.get_ticks() + 2200
+    else:
+        state.doc_msg_color = RED
+        state.doc_msg       = "These don't add up. Re-read and try again."
+
+
+# ── Reading panel click ───────────────────────────────────────────────────────
+
+def click_reading(state, pos: tuple) -> None:
+    from settings import GAME_W
+    panel     = pygame.Rect(GAME_W // 2 - 380, 130, 760, 560)
+    close_btn = pygame.Rect(panel.x + 36, panel.bottom - 76, 170, 40)
+    if close_btn.collidepoint(pos):
+        close_any_overlay(state)
+
+
+# ── Local import needed for keypad cancel rect ────────────────────────────────
+from settings import GAME_W
+
+
+# ── Journal overlay ────────────────────────────────────────────────────────────
+
+def open_journal(state) -> None:
+    from data.puzzle_data import JOURNAL_PAGES
+    # Start on last page (the "current" final note)
+    state.journal_page   = len(JOURNAL_PAGES) - 1
+    state.active_overlay = "journal"
+    state.input_locked   = True
+
+
+def click_journal(state, pos: tuple) -> None:
+    from ui.overlays import journal_nav_rects
+    from data.puzzle_data import JOURNAL_PAGES
+    prev_r, next_r, close_r = journal_nav_rects()
+    total = len(JOURNAL_PAGES)
+    if prev_r.collidepoint(pos) and state.journal_page > 0:
+        state.journal_page -= 1
+    elif next_r.collidepoint(pos) and state.journal_page < total - 1:
+        state.journal_page += 1
+    elif close_r.collidepoint(pos):
+        close_any_overlay(state)
