@@ -16,6 +16,7 @@ SOUND APPROACH: mirrors the working pygame version exactly.
 from __future__ import annotations
 
 import os
+import random
 import pygame
 from settings import GAME_W, GAME_H, ACCENT, DIM, PAPER, RED, BLACK
 from entities.rain import draw_rain
@@ -42,6 +43,9 @@ _VIDEO_CANDIDATES = [
     "intro_Case_redacted.mp4",
     "intro_case_redacted.mp4",
 ]
+
+# Container for independent intro rain rendering
+_intro_rain_data: list = []
 
 
 def _try_load_video() -> bool:
@@ -207,39 +211,95 @@ def draw_video(surf: pygame.Surface, mouse: tuple) -> None:
     surf.blit(t, (skip.centerx - t.get_width() // 2, skip.centery - t.get_height() // 2))
 
 
+# Ensure these two tracking variables are placed right above draw_intro
+_intro_rain_data: list = []
+_intro_flash_timer: int = 0
+
 def draw_intro(surf: pygame.Surface, mouse: tuple) -> None:
+    global _intro_rain_data, _intro_flash_timer
     intro_font       = font(20)
     intro_small_font = font(16)
 
-    surf.fill(BLACK)
-    l1 = intro_small_font.render("— a storm. an abandoned office. one detective. —", True, DIM)
-    surf.blit(l1, (GAME_W // 2 - l1.get_width() // 2, 300))
+    # 1. Clear background canvas to standard dark noir storm tone
+    surf.fill((10, 11, 13))
+    
+    # 2. Custom direct-blitted rain loop
+    try:
+        from entities.rain import RainDrop
+        if not _intro_rain_data or not isinstance(_intro_rain_data[0], RainDrop):
+            _intro_rain_data = [RainDrop() for _ in range(80)]
+            for d in _intro_rain_data:
+                d.y = random.uniform(0, GAME_H)
+                d.length = random.uniform(50, 100)
 
+        for drop in _intro_rain_data:
+            drop.y += 20  
+            if drop.y > GAME_H:
+                drop.y = random.uniform(-150, -10)
+                drop.x = random.uniform(0, GAME_W)
+
+            # Direct solid line blitting on the primary layout surface
+            pygame.draw.line(
+                surf, 
+                (130, 155, 180), 
+                (int(drop.x), int(drop.y)), 
+                (int(drop.x), int(drop.y + drop.length)), 
+                1
+            )
+    except Exception:
+        surf.fill((15, 17, 20))
+
+    # 3. Soft, Eye-Friendly Ambient Lightning Flash Overlay
+    if _intro_flash_timer == 0 and random.random() < 0.005:
+        _intro_flash_timer = random.randint(3, 5) # Lasts slightly longer for a soft fade appearance
+
+    if _intro_flash_timer > 0:
+        # Create a translucent, soft tint surface instead of a solid blinding color
+        flash_surf = pygame.Surface((GAME_W, GAME_H), pygame.SRCALPHA)
+        flash_surf.fill((180, 195, 215, 100))
+        surf.blit(flash_surf, (0, 0))
+        _intro_flash_timer -= 1
+
+    # 4. Add cinematic noir dossier panel framework over the falling rain/lightning
+    panel_rect = pygame.Rect(GAME_W // 2 - 400, 200, 800, 360)
+    pygame.draw.rect(surf, (21, 24, 29), panel_rect)          
+    pygame.draw.rect(surf, ACCENT, panel_rect, 1)             
+
+    # 5. Content Header Placement
+    l1 = intro_small_font.render("— PRESENT DAY · A SEVERE STORM —", True, ACCENT)
+    surf.blit(l1, (GAME_W // 2 - l1.get_width() // 2, 230))
+
+    # 6. Core Narrative Text Blocks
     body = (
-        "Detective Arthur Walker was found dead in his own office.\n"
-        "The official report has been sealed.\n"
-        "You are the one sent to find out why."
+        "Seeking urgent shelter from a violent downpour, Noah Walker enters an old office.\n"
+        "His initial goal is completely simple:\n"
+        "\"I'll just stay here until the rain dies down.\"\n"
+        "But an eerie curiosity keeps him anchored inside..."
     )
-    y = 390
+    
+    y = 290
     for line in wrap_text(body, intro_font, 680):
-        t = intro_font.render(line, True, PAPER)
+        color = PAPER if "\"" in line else (207, 211, 216)
+        t = intro_font.render(line, True, color)
         surf.blit(t, (GAME_W // 2 - t.get_width() // 2, y))
         y += 38
 
+    # 7. Interactive Core Progression Button
     rect_ = intro_skip_rect()
     hover = rect_.collidepoint(mouse)
-    pygame.draw.rect(surf, (30, 24, 12) if hover else BLACK, rect_)
+    pygame.draw.rect(surf, (35, 28, 15) if hover else (21, 24, 29), rect_)
     pygame.draw.rect(surf, ACCENT, rect_, 1)
-    t = intro_small_font.render("ENTER THE OFFICE  →", True, ACCENT)
+    t = intro_small_font.render("STEP INTO THE DARKNESS  →", True, ACCENT)
     surf.blit(t, (rect_.centerx - t.get_width() // 2, rect_.centery - t.get_height() // 2))
 
+    # 8. Secondary Exit Element
     erect = intro_exit_rect()
     ehov  = erect.collidepoint(mouse)
-    pygame.draw.rect(surf, (25, 15, 15) if ehov else BLACK, erect)
-    pygame.draw.rect(surf, (120, 50, 50) if ehov else (60, 40, 40), erect, 1)
-    et = font(14).render("I'm not ready — EXIT", True, (200, 100, 100) if ehov else (140, 80, 80))
+    pygame.draw.rect(surf, (40, 20, 20) if ehov else (21, 24, 29), erect)
+    pygame.draw.rect(surf, RED if ehov else (80, 40, 40), erect, 1)
+    et = font(14).render("Turn back into the rain — EXIT", True, RED if ehov else DIM)
     surf.blit(et, (erect.centerx - et.get_width() // 2, erect.centery - et.get_height() // 2))
-
+    
 
 # ── Click handlers ────────────────────────────────────────────────────────────
 
@@ -288,3 +348,4 @@ def reset_video() -> None:
         _try_load_video()
 
     _play_video_audio()
+    
