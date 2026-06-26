@@ -331,8 +331,12 @@ def video_finished() -> bool:
 
 def click_intro(pos: tuple) -> str | None:
     if intro_skip_rect().collidepoint(pos):
+        # Halt the underlying introductory mp3 audio channel loop immediately 
+        # before the scene manager swaps execution control over to game.py
+        _stop_video_audio()
         return "playing"
     if intro_exit_rect().collidepoint(pos):
+        _stop_video_audio()
         return "exit"
     return None
 

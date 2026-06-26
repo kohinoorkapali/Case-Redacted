@@ -1,23 +1,17 @@
 """
 entities/player.py — Player state, movement, collision, and rendering.
-
-The Player class is intentionally free of game-phase logic.
-It receives a collision callback (can_move_fn) so it doesn't need to
-import the room data directly — the Game class wires that up.
 """
 
 import math
 import pygame
-
-from settings import PLAYER_SPEED, PLAYER_BODY, PLAYER_SKIN, PLAYER_HAIR, PLAYER_EYE
-
+from settings import PLAYER_SPEED
 
 class Player:
     def __init__(self, x: float = 1300.0, y: float = 760.0):
         self.x      = x
         self.y      = y
-        self.w      = 30
-        self.h      = 38
+        self.w      = 40 
+        self.h      = 60 
         self.speed  = PLAYER_SPEED
         self.dir    = "down"
         self.moving = False
@@ -26,7 +20,6 @@ class Player:
     # ── Movement ──────────────────────────────────────────────────────────────
 
     def update(self, input_locked: bool, can_move_fn) -> None:
-        """Read keyboard, apply movement with collision, animate walk cycle."""
         if input_locked:
             self.moving = False
             return
@@ -40,12 +33,10 @@ class Player:
 
         self.moving = dx != 0 or dy != 0
 
-        # normalise diagonal speed
         if dx != 0 and dy != 0:
             dx *= 0.7071
             dy *= 0.7071
 
-        # update facing direction
         if   dx > 0: self.dir = "right"
         elif dx < 0: self.dir = "left"
         elif dy > 0: self.dir = "down"
@@ -57,44 +48,62 @@ class Player:
         if can_move_fn(self.x, ny): self.y = ny
 
         if self.moving:
-            self.frame += 0.18
-
-    def teleport(self, x: float, y: float) -> None:
-        self.x, self.y = x, y
-
-    @property
-    def rect(self) -> pygame.Rect:
-        return pygame.Rect(int(self.x), int(self.y), self.w, self.h)
+            self.frame += 0.2
 
     @property
     def reach_rect(self) -> pygame.Rect:
         return pygame.Rect(int(self.x - 18), int(self.y - 18), self.w + 36, self.h + 36)
+    
+    @property
+    def rect(self) -> pygame.Rect:
+        return pygame.Rect(int(self.x), int(self.y), self.w, self.h)
 
     # ── Rendering ─────────────────────────────────────────────────────────────
 
     def draw(self, surf: pygame.Surface) -> None:
-        cx = self.x + self.w / 2
-        cy = self.y + self.h / 2
-
-        # drop shadow
-        shadow = pygame.Surface((int(self.w * 1.2), 16), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (0, 0, 0, 100), shadow.get_rect())
-        surf.blit(shadow, (cx - shadow.get_width() / 2, self.y + self.h - 6))
-
-        bob = math.sin(self.frame * 6) * 2 if self.moving else 0
-
-        # body
-        pygame.draw.rect(surf, PLAYER_BODY, (self.x, self.y + 6 + bob, self.w, self.h - 10))
-        # head
-        pygame.draw.circle(surf, PLAYER_SKIN, (int(cx), int(self.y + 8 + bob)), 9)
-        # hair
-        pygame.draw.rect(surf, PLAYER_HAIR, (cx - 11, self.y - 2 + bob, 22, 6))
-        pygame.draw.rect(surf, PLAYER_HAIR, (cx - 7,  self.y - 7 + bob, 14, 6))
-
-        # eye / look direction dot
-        lx, ly = cx, cy
-        if   self.dir == "up":    ly -= 16
-        elif self.dir == "down":  ly += 16
-        elif self.dir == "left":  lx -= 16
-        elif self.dir == "right": lx += 16
-        pygame.draw.circle(surf, PLAYER_EYE, (int(lx), int(ly)), 3)
+        # 1. Bigger Surface (Increased size by 1.5x)
+        self.w, self.h = 60, 90 
+        char_surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        
+        # 2. Animation Math
+        bob = math.sin(self.frame * 5) * 4 if self.moving else 0
+        leg_spread = math.sin(self.frame * 5) * 12 if self.moving else 0
+        
+        # 3. Shadow
+        pygame.draw.ellipse(char_surf, (0, 0, 0, 60), (10, self.h - 10, self.w - 20, 8))
+        
+        # 4. Legs
+        leg_color = (40, 35, 30)
+        pygame.draw.line(char_surf, leg_color, (self.w // 2 - 8, self.h - 25 + bob), (self.w // 2 - 8 + leg_spread, self.h - 5), 6)
+        pygame.draw.line(char_surf, leg_color, (self.w // 2 + 8, self.h - 25 + bob), (self.w // 2 + 8 - leg_spread, self.h - 5), 6)
+        
+        # 5. Torso (Trench coat)
+        pygame.draw.rect(char_surf, (70, 60, 50), (12, 25 + bob, self.w - 24, self.h - 50), border_radius=8)
+        
+        # 6. Arms
+        arm_color = (60, 50, 40)
+        pygame.draw.line(char_surf, arm_color, (12, 30 + bob), (5, 50 + bob), 5)
+        pygame.draw.line(char_surf, arm_color, (self.w - 12, 30 + bob), (self.w - 5, 50 + bob), 5)
+        
+        # 7. Head
+        pygame.draw.circle(char_surf, (255, 220, 180), (self.w // 2, 25 + bob), 15)
+        
+        # 8. Fedora
+        pygame.draw.ellipse(char_surf, (40, 40, 40), (self.w // 2 - 20, 10 + bob, 40, 10))
+        pygame.draw.rect(char_surf, (50, 50, 50), (self.w // 2 - 12, 2 + bob, 24, 10), border_radius=4)
+        
+        # 9. TWO EYES (Dynamic based on direction)
+        eye_y = 25 + bob
+        eye_offset = 6 # Distance between eyes
+        if self.dir == "up":
+            pass # Eyes hidden by hat brim
+        elif self.dir == "left":
+            pygame.draw.circle(char_surf, (20, 20, 20), (self.w // 2 - 8, eye_y), 3)
+        elif self.dir == "right":
+            pygame.draw.circle(char_surf, (20, 20, 20), (self.w // 2 + 8, eye_y), 3)
+        else: # Down/Forward
+            pygame.draw.circle(char_surf, (20, 20, 20), (self.w // 2 - 6, eye_y), 3)
+            pygame.draw.circle(char_surf, (20, 20, 20), (self.w // 2 + 6, eye_y), 3)
+        
+        # 10. Draw to main screen
+        surf.blit(char_surf, (int(self.x), int(self.y)))
