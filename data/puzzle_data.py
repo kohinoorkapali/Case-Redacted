@@ -24,22 +24,34 @@ TRACKER_ITEMS = [
 
 MAG_IMAGES = [
     {
-        "base":   (38, 32, 28),
-        "label":  "Crime scene photo #1 — Desk area (11:47 PM)",
-        "reveal": "Timestamp reads 11:47 PM — matches the visitor sign-in sheet exactly.",
-        "file":   "assets/photo_desk.jpg",
+        "base":     (38, 32, 28),
+        "label":    "Crime scene photo #1 — Desk area",
+        "reveal":   "Timestamp matches the visitor sign-in sheet exactly.",
+        "file":     "assets/images/photo1.jpeg",
+        "spot_x":   900,
+        "spot_y":   530,
+        "spot_r":   70,
+        "flag":     "deskVerified",
     },
     {
-        "base":   (30, 34, 36),
-        "label":  "Crime scene photo #2 — Hallway outside office",
-        "reveal": "A second shadow is cast behind the door frame. Arthur was not alone.",
-        "file":   "assets/photo_hallway.jpg",
+        "base":     (30, 34, 36),
+        "label":    "Crime scene photo #2 — Office chair",
+        "reveal":   "Chair position contradicts the official report.",
+        "file":     "assets/images/photo2.jpeg",
+        "spot_x":   615,
+        "spot_y":   270,
+        "spot_r":   60,
+        "flag":     "chairVerified",
     },
     {
-        "base":   (28, 28, 32),
-        "label":  "Crime scene photo #3 — Office chair",
-        "reveal": "The chair is rotated 40° away from the desk — opposite to the report sketch.",
-        "file":   "assets/photo_chair.jpg",
+        "base":     (28, 28, 32),
+        "label":    "Crime scene photo #3 — Hallway outside office",
+        "reveal":   "Arthur was not alone.",
+        "file":     "assets/images/photo3.jpeg",
+        "spot_x":   125,
+        "spot_y":   260,
+        "spot_r":   90,
+        "flag":     "hallwayVerified",
     },
 ]
 
@@ -76,6 +88,12 @@ UV_SPOTS = [
         "y":    180,
         "true": False,
         "text": "CASE WAS SUICIDE",
+    },
+    {
+        "x": 590,
+        "y": 450,
+        "true": True,
+        "text": "KILLER'S SIGNATURE: A partial print matches Case 4-7-2.", # The Golden Clue
     },
 ]
 

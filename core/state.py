@@ -32,23 +32,29 @@ class GameState:
         self.mag_mask       = make_circle_mask(70)
         self.uv_mask        = make_circle_mask(90)
 
+        # ── Initial State ─────────────────────────────────────────────────────
         self.reset()
-
-    def reset(self) -> None:
-        """Return everything to its start-of-game defaults."""
-        # phase: 'menu' → 'intro' → 'playing'
-        self.phase        = "menu"
-        self.current_room = ROOM_A
-        self.input_locked = False
-
+        
+        # ── Flags (Now correctly indented inside __init__) ───────────────────
         self.flags: dict = {
             "readNewspaper": False,
             "sawWhiteboard": False,
             "sawDesk":       False,
             "doorUnlocked":  False,
-            "magCount":      0,
+            "foundCassette": False,
+            "foundDocs":     False,
+            
             "uvFound":       set(),
+            "evidenceCount": 0,
+            "photoSolved":   False,
             "docSolved":     False,
+            
+            "deskVerified":    False,
+            "hallwayVerified": False,
+            "chairVerified":   False,
+            
+            "theoryFormed":    False,
+            "terminalUnlocked": False,
         }
 
         self.player = Player(x=1300.0, y=760.0)
@@ -76,9 +82,16 @@ class GameState:
         self.shake_until: int = 0
         self.end_card_at: int | None = None
 
+    def reset(self) -> None:
+        """Return everything to its start-of-game defaults."""
+        self.phase        = "menu"
+        self.current_room = ROOM_A
+        self.input_locked = False
+
     # ── Convenience ───────────────────────────────────────────────────────────
 
     def get_mouse(self) -> tuple[float, float]:
         """Return mouse position scaled to internal game resolution."""
         mx, my = pygame.mouse.get_pos()
         return mx / SCALE_X, my / SCALE_Y
+    
