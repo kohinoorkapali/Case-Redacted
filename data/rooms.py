@@ -20,18 +20,18 @@ def R(x, y, w, h):
 ROOM_A = {
     "name": "ROOM A \u2014 MAIN OFFICE",
     "walls": [
-        R(0, 0, 1600, 40), R(0, 860, 1600, 40),
+        R(0, 0, 1600, 80), R(0, 860, 1600, 40),
         R(0, 0, 40, 900),  R(1560, 0, 40, 900),
         # Computer desk — top-left against both walls
-        R(50,  40, 200, 100),   # left desk
-        R(200, 40, 200, 100),   # center desk
-        R(325, 40, 200, 100),   # right desk
+        R(50,  80, 200, 100),   # left desk
+        R(200, 80, 200, 100),   # center desk
+        R(325, 80, 200, 100),   # right desk
         # Whiteboard — top wall, center-left
-        R(540, 40, 460, 100),
+        R(600, 0, 200, 80),
         # Printer — top wall, right of whiteboard
-        R(1000, 40, 130, 90),
+        R(1000, 60, 130, 90),
         # File cabinets — top-right
-        R(1200, 40, 260, 90),
+        R(1400, 0, 130, 130),
         # Table/desk collision — center
         R(650, 380, 240, 110),
         # Sofa — bottom center
@@ -49,7 +49,7 @@ ROOM_A = {
         },
         {
             # Whiteboard — top of room, against top wall
-            "id": "whiteboard", "x": 540, "y": 40, "w": 460, "h": 100,
+            "id": "whiteboard", "x": 600, "y": 0, "w": 200, "h": 80,
             "label": "Whiteboard", "color": (233, 236, 239), "kind": "whiteboard",
         },
         {
@@ -60,11 +60,11 @@ ROOM_A = {
     ],
     "deco": [
         # Computer desk — top-left corner, against left + top walls
-        {"x": 50,   "y": 40,  "w": 120, "h": 110, "color": (44, 51, 61),  "label": "Computer Desk"},
+        {"x": 50, "y": 80, "w": 120, "h": 110, "color": (44, 51, 61), "label": "Computer Desk"},
         # Printer — right side of whiteboard, against top wall
-        {"x": 1000, "y": 40,  "w": 130, "h": 90,  "color": (35, 38, 43),  "label": "Printer"},
+        {"x": 1000, "y": 60, "w": 130, "h": 90, "color": (35, 38, 43), "label": "Printer"},
         # File cabinets — top-right, against top wall
-        {"x": 1200, "y": 40,  "w": 260, "h": 90,  "color": (51, 39, 30),  "label": "File Cabinets"},
+        {"x": 1400, "y": 0, "w": 130, "h": 130, "color": (51, 39, 30), "label": "File Cabinets"},
         # Sofa — bottom center
         {"x": 560,  "y": 720, "w": 300, "h": 100, "color": (58, 37, 48),  "label": "Sofa"},
         # Water cooler — bottom right (where printer used to be)

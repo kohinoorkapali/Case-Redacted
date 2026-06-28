@@ -24,6 +24,8 @@ from systems.utils import draw_block, draw_panel_box, kbd_box_surface, wrap_text
 from assets.fonts import font
 
 _DESK_IMGS = {}
+_ASSET_IMGS = {}
+
 
 def _get_desk(variant: str):
     if variant not in _DESK_IMGS:
@@ -41,6 +43,17 @@ def _get_desk(variant: str):
         frame.blit(sheet, (0, 0), (cx, cy, sw, sh))
         _DESK_IMGS[variant] = pygame.transform.scale(frame, (200, 180))
     return _DESK_IMGS[variant]
+
+def _get_asset(name: str, w: int, h: int):
+    key = (name, w, h)
+    if key not in _ASSET_IMGS:
+        img = pygame.image.load(f"assets/images/{name}.png").convert_alpha()
+        # Scale to height, preserve aspect ratio
+        orig_w, orig_h = img.get_size()
+        scale = h / orig_h
+        new_w = int(orig_w * scale)
+        _ASSET_IMGS[key] = pygame.transform.scale(img, (new_w, h))
+    return _ASSET_IMGS[key]
 
 def draw_room(surf: pygame.Surface, state) -> None:
     """Top-level call: floor → deco → door → objects → player → vignette."""
@@ -107,13 +120,15 @@ def _draw_deco(surf: pygame.Surface, state) -> None:
     for d in state.current_room.get("deco", []):
         if d["label"] == "Computer Desk":
             surf.blit(_get_desk("top_left"), (d["x"], d["y"]))
+        elif d["label"] == "File Cabinets":
+            surf.blit(_get_asset("file_cabinet", 240, 220), (d["x"], d["y"]))
         else:
             draw_block(surf, d["x"], d["y"], d["w"], d["h"], d["color"], d["label"], lbl_font)
 
     # Extra desks only in Room A
     if state.current_room is ROOM_A:
-        surf.blit(_get_desk("bottom_right"), (200, 47))
-        surf.blit(_get_desk("top_right"),    (325, 40))
+        surf.blit(_get_desk("bottom_right"), (200, 90))
+        surf.blit(_get_desk("top_right"),    (325, 80))
 
         _dark = pygame.Surface((475, 180), pygame.SRCALPHA)
         _dark.fill((0, 0, 0, 40))
@@ -123,25 +138,28 @@ def _draw_deco(surf: pygame.Surface, state) -> None:
 def _draw_objects(surf: pygame.Surface, state) -> None:
     lbl_font = font(12)
     for o in state.current_room["objects"]:
-        draw_block(surf, o["x"], o["y"], o["w"], o["h"], o["color"], o["label"], lbl_font)
         if o["kind"] == "whiteboard":
-            _draw_whiteboard_doodles(surf, o)
+            surf.blit(_get_asset("whiteboard", 660, 120), (o["x"], o["y"]))
+        elif o["id"] in ("cabinet1", "cabinet2"):
+            surf.blit(_get_asset("file_cabinet", o["w"], o["h"]), (o["x"], o["y"]))
+        else:
+            draw_block(surf, o["x"], o["y"], o["w"], o["h"], o["color"], o["label"], lbl_font)
         if o["id"] == "desk" and not state.flags["doorUnlocked"]:
             t = font(11).render("journal", True, (202, 162, 75))
             surf.blit(t, (o["x"] + 8, o["y"] + 14))
 
 
-def _draw_whiteboard_doodles(surf: pygame.Surface, o: dict) -> None:
-    col = (34, 34, 34)
-    pygame.draw.circle(surf, col, (o["x"] + 60, o["y"] + 70), 16, 1)
-    pygame.draw.rect(surf,   col, (o["x"] + 150, o["y"] + 55, 30, 30), 1)
-    pygame.draw.polygon(surf, col, [
-        (o["x"] + 250, o["y"] + 90),
-        (o["x"] + 280, o["y"] + 50),
-        (o["x"] + 310, o["y"] + 90),
-    ], 1)
-    pygame.draw.line(surf, col, (o["x"] + 76, o["y"] + 70), (o["x"] + 150, o["y"] + 70), 1)
-    pygame.draw.line(surf, col, (o["x"] + 180, o["y"] + 70), (o["x"] + 265, o["y"] + 75), 1)
+# def _draw_whiteboard_doodles(surf: pygame.Surface, o: dict) -> None:
+#     col = (34, 34, 34)
+#     pygame.draw.circle(surf, col, (o["x"] + 60, o["y"] + 70), 16, 1)
+#     pygame.draw.rect(surf,   col, (o["x"] + 150, o["y"] + 55, 30, 30), 1)
+#     pygame.draw.polygon(surf, col, [
+#         (o["x"] + 250, o["y"] + 90),
+#         (o["x"] + 280, o["y"] + 50),
+#         (o["x"] + 310, o["y"] + 90),
+#     ], 1)
+#     pygame.draw.line(surf, col, (o["x"] + 76, o["y"] + 70), (o["x"] + 150, o["y"] + 70), 1)
+#     pygame.draw.line(surf, col, (o["x"] + 180, o["y"] + 70), (o["x"] + 265, o["y"] + 75), 1)
 
 
 def _draw_door(surf: pygame.Surface, state) -> None:
