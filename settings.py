@@ -18,9 +18,9 @@ PLAYER_SPEED = 3.4
 DOOR_CODE    = "247"           # the code the player must enter at the keypad
 
 # ── Colour palette ────────────────────────────────────────────────────────────
-INK    = (11,  13,  16)
-PANEL  = (21,  24,  29)
-PANEL2 = (29,  33,  39)
+INK    = (60,  65,  72)
+PANEL  = (75,  82,  92)
+PANEL2 = (90,  98,  108)
 ACCENT = (201, 162, 75)
 ACCENT2= (111, 168, 201)
 RED    = (179, 70,  63)
@@ -30,10 +30,10 @@ DIM    = (107, 114, 128)
 WHITE  = (255, 255, 255)
 BLACK  = (0,   0,   0)
 
-FLOOR_BG           = (23,  26,  30)
-FLOOR_BORDER_BG    = (12,  14,  17)
-FLOOR_BORDER_STROKE= (42,  46,  53)
-GRID_LINE          = (255, 255, 255, 6)
+FLOOR_BG = (48, 52, 60) 
+FLOOR_BORDER_BG    = (8,  9,  11)   # was (12, 14, 17) — darker wall
+FLOOR_BORDER_STROKE= (30, 33, 38)   # was (42, 46, 53)
+GRID_LINE          = (255, 255, 255, 20)
 
 PLAYER_BODY = (43,  51,  64)
 PLAYER_SKIN = (202, 169, 135)

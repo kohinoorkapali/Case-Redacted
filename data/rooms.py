@@ -20,55 +20,72 @@ def R(x, y, w, h):
 ROOM_A = {
     "name": "ROOM A \u2014 MAIN OFFICE",
     "walls": [
-        R(0, 0, 1600, 40), R(0, 860, 1600, 40),
+        R(0, 0, 1600, 80), R(0, 860, 1600, 40),
         R(0, 0, 40, 900),  R(1560, 0, 40, 900),
         # Computer desk — top-left against both walls
-        R(50, 40, 120, 110),
+        R(50,  80, 200, 100),   # left desk
+        R(200, 80, 200, 100),   # center desk
+        R(325, 80, 200, 100),   # right desk
         # Whiteboard — top wall, center-left
-        R(380, 40, 460, 100),
+        R(600, 0, 200, 80),
         # Printer — top wall, right of whiteboard
-        R(950, 40, 130, 90),
+        R(980, 30, 130, 120),
         # File cabinets — top-right
-        R(1200, 40, 260, 90),
+        R(1400, 0, 130, 130),
         # Table/desk collision — center
-        R(650, 380, 240, 110),
+        R(650, 380, 180, 110),
         # Sofa — bottom center
-        R(560, 720, 300, 100),
+        R(395, 750, 155, 30),    # sofa down
+        R(395, 580, 155, 30),    # sofa up
         # Water cooler — bottom right area (old printer spot)
-        R(960, 720, 90, 90),
+        R(920, 690, 80, 140), 
         # Stacked Boxes — bottom left
-        R(120, 720, 160, 90),
+        R(170, 690, 110, 120),
+        R(1490, 300, 60, 80),   # plant right wall
+        R(1490, 500, 60, 80),   # plant right wall
+        R(870, 60, 60, 80),   # plant left wall
+        R(50,   720, 60, 80),   # plant bottom left
+        R(670, 690, 170, 160),
     ],
     "door": R(40, 380, 30, 140),
     "objects": [
         {
-            "id": "newspaper", "x": 760, "y": 810, "w": 70, "h": 40,
+            "id": "newspaper", "x": 1250, "y": 400, "w": 100, "h": 60,
             "label": "Newspaper", "color": (207, 201, 176), "kind": "paper-floor",
         },
         {
             # Whiteboard — top of room, against top wall
-            "id": "whiteboard", "x": 380, "y": 40, "w": 460, "h": 100,
+            "id": "whiteboard", "x": 600, "y": 0, "w": 200, "h": 80,
             "label": "Whiteboard", "color": (233, 236, 239), "kind": "whiteboard",
         },
         {
             # Arthur's desk — center of room
-            "id": "desk", "x": 650, "y": 380, "w": 240, "h": 110,
+            "id": "desk", "x": 650, "y": 380, "w": 360, "h": 165,
             "label": "Arthur's Desk", "color": (90, 70, 50), "kind": "desk",
         },
     ],
     "deco": [
         # Computer desk — top-left corner, against left + top walls
-        {"x": 50,   "y": 40,  "w": 120, "h": 110, "color": (44, 51, 61),  "label": "Computer Desk"},
+        {"x": 50, "y": 80, "w": 120, "h": 110, "color": (44, 51, 61), "label": "Computer Desk"},
         # Printer — right side of whiteboard, against top wall
-        {"x": 950,  "y": 40,  "w": 130, "h": 90,  "color": (35, 38, 43),  "label": "Printer"},
+        {"x": 980, "y": 70, "w": 170, "h": 120, "color": (35, 38, 43), "label": "Printer"},
         # File cabinets — top-right, against top wall
-        {"x": 1200, "y": 40,  "w": 260, "h": 90,  "color": (51, 39, 30),  "label": "File Cabinets"},
+        {"x": 1400, "y": 0, "w": 130, "h": 130, "color": (51, 39, 30), "label": "File Cabinets"},
         # Sofa — bottom center
-        {"x": 560,  "y": 720, "w": 300, "h": 100, "color": (58, 37, 48),  "label": "Sofa"},
+        {"x": 380, "y": 710, "w": 220, "h": 75, "color": (58, 37, 48), "label": "Sofa"},  # down
+        {"x": 380, "y": 560, "w": 220, "h": 75, "color": (58, 37, 48), "label": "Sofa"}, 
         # Water cooler — bottom right (where printer used to be)
-        {"x": 960,  "y": 720, "w": 90,  "h": 90,  "color": (38, 65, 74),  "label": "Water Cooler"},
+        {"x": 900, "y": 640, "w": 150, "h": 200, "color": (38, 65, 74), "label": "Water Cooler"},
         # Stacked boxes — bottom left
-        {"x": 120,  "y": 720, "w": 160, "h": 90,  "color": (61, 52, 36),  "label": "Stacked Boxes"},
+        {"x": 120, "y": 680, "w": 220, "h": 140, "color": (61, 52, 36), "label": "Stacked Boxes"},
+        # Coffee station — between sofas and water cooler
+        {"x": 680, "y": 690, "w": 220, "h": 160, "color": (60, 40, 20), "label": "Coffee Station"},
+        # Plants — scattered
+        {"x": 1490, "y": 300, "w": 60, "h": 80, "color": (30, 80, 30), "label": "Plant", "variant": 0},
+        {"x": 1490, "y": 500, "w": 60, "h": 80, "color": (30, 80, 30), "label": "Plant", "variant": 2},
+        {"x": 870, "y": 60, "w": 60, "h": 80, "color": (30, 80, 30), "label": "Plant", "variant": 4},
+        {"x": 50,   "y": 720, "w": 60, "h": 80, "color": (30, 80, 30), "label": "Plant", "variant": 1},
+
     ],
 }
 

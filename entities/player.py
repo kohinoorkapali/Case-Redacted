@@ -11,17 +11,42 @@ import pygame
 
 from settings import PLAYER_SPEED, PLAYER_BODY, PLAYER_SKIN, PLAYER_HAIR, PLAYER_EYE
 
-
+def _load_frames(sheet: pygame.Surface, row: int, num_cols: int):
+    fw = sheet.get_width() // num_cols
+    fh = sheet.get_height() // 4
+    frames = []
+    for col in range(num_cols):
+        frame = pygame.Surface((fw, fh), pygame.SRCALPHA)
+        frame.blit(sheet, (0, 0), (col * fw, row * fh, fw, fh))
+        frames.append(frame)
+    return frames
 class Player:
+    _DIR_ROW = {"down": 0, "up": 1, "right": 2, "left": 3}
+
     def __init__(self, x: float = 1300.0, y: float = 760.0):
         self.x      = x
         self.y      = y
-        self.w      = 30
-        self.h      = 38
+        self.w      = 96
+        self.h      = 96
         self.speed  = PLAYER_SPEED
         self.dir    = "down"
         self.moving = False
         self.frame  = 0.0
+        self._sprites_loaded = False
+        self._walk_frames  = {}
+        self._idle_frames  = {}
+    
+
+    def load_sprites(self, walk_path="assets/walk.png", idle_path="assets/idle.png"):
+        walk_sheet = pygame.image.load(walk_path).convert_alpha()
+        idle_sheet = pygame.image.load(idle_path).convert_alpha()
+        for direction, row in self._DIR_ROW.items():
+            self._walk_frames[direction] = _load_frames(walk_sheet, row, 4)
+            self._idle_frames[direction] = _load_frames(idle_sheet, row, 1)
+        for d in self._DIR_ROW:
+            self._walk_frames[d] = [pygame.transform.scale(f, (self.w, self.h)) for f in self._walk_frames[d]]
+            self._idle_frames[d] = [pygame.transform.scale(f, (self.w, self.h)) for f in self._idle_frames[d]]
+        self._sprites_loaded = True
 
     # ── Movement ──────────────────────────────────────────────────────────────
 
@@ -81,20 +106,18 @@ class Player:
         pygame.draw.ellipse(shadow, (0, 0, 0, 100), shadow.get_rect())
         surf.blit(shadow, (cx - shadow.get_width() / 2, self.y + self.h - 6))
 
-        bob = math.sin(self.frame * 6) * 2 if self.moving else 0
-
-        # body
-        pygame.draw.rect(surf, PLAYER_BODY, (self.x, self.y + 6 + bob, self.w, self.h - 10))
-        # head
-        pygame.draw.circle(surf, PLAYER_SKIN, (int(cx), int(self.y + 8 + bob)), 9)
-        # hair
-        pygame.draw.rect(surf, PLAYER_HAIR, (cx - 11, self.y - 2 + bob, 22, 6))
-        pygame.draw.rect(surf, PLAYER_HAIR, (cx - 7,  self.y - 7 + bob, 14, 6))
-
-        # eye / look direction dot
-        lx, ly = cx, cy
-        if   self.dir == "up":    ly -= 16
-        elif self.dir == "down":  ly += 16
-        elif self.dir == "left":  lx -= 16
-        elif self.dir == "right": lx += 16
-        pygame.draw.circle(surf, PLAYER_EYE, (int(lx), int(ly)), 3)
+        if self._sprites_loaded:
+            frames = self._walk_frames[self.dir] if self.moving else self._idle_frames[self.dir]
+            surf.blit(frames[int(self.frame) % len(frames)], (int(self.x), int(self.y)))
+        else:
+            bob = math.sin(self.frame * 6) * 2 if self.moving else 0
+            pygame.draw.rect(surf, PLAYER_BODY, (self.x, self.y + 6 + bob, self.w, self.h - 10))
+            pygame.draw.circle(surf, PLAYER_SKIN, (int(cx), int(self.y + 8 + bob)), 9)
+            pygame.draw.rect(surf, PLAYER_HAIR, (cx - 11, self.y - 2 + bob, 22, 6))
+            pygame.draw.rect(surf, PLAYER_HAIR, (cx - 7,  self.y - 7 + bob, 14, 6))
+            lx, ly = cx, cy
+            if   self.dir == "up":    ly -= 16
+            elif self.dir == "down":  ly += 16
+            elif self.dir == "left":  lx -= 16
+            elif self.dir == "right": lx += 16
+            pygame.draw.circle(surf, PLAYER_EYE, (int(lx), int(ly)), 3)

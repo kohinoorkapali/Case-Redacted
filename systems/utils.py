@@ -117,7 +117,7 @@ def precompute_floor_surface() -> pygame.Surface:
         y += 64
     surf.blit(grid, (0, 0))
 
-    pygame.draw.rect(surf, FLOOR_BORDER_BG, (0, 0, GAME_W, 40))
+    pygame.draw.rect(surf, FLOOR_BORDER_BG, (0, 0, GAME_W, 150))        # top wall — was 40
     pygame.draw.rect(surf, FLOOR_BORDER_BG, (0, GAME_H - 40, GAME_W, 40))
     pygame.draw.rect(surf, FLOOR_BORDER_BG, (0, 0, 40, GAME_H))
     pygame.draw.rect(surf, FLOOR_BORDER_BG, (GAME_W - 40, 0, 40, GAME_H))
