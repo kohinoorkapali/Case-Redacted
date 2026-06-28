@@ -23,6 +23,24 @@ from data.puzzle_data import TRACKER_ITEMS
 from systems.utils import draw_block, draw_panel_box, kbd_box_surface, wrap_text
 from assets.fonts import font
 
+_DESK_IMGS = {}
+
+def _get_desk(variant: str):
+    if variant not in _DESK_IMGS:
+        sheet = pygame.image.load("assets/images/computer_desk.png").convert_alpha()
+        sw = sheet.get_width() // 2
+        sh = sheet.get_height() // 2
+        coords = {
+            "top_left":     (0,  0),
+            "top_right":    (sw, 0),
+            "bottom_left":  (0,  sh),
+            "bottom_right": (sw, sh),
+        }
+        cx, cy = coords[variant]
+        frame = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        frame.blit(sheet, (0, 0), (cx, cy, sw, sh))
+        _DESK_IMGS[variant] = pygame.transform.scale(frame, (200, 180))
+    return _DESK_IMGS[variant]
 
 def draw_room(surf: pygame.Surface, state) -> None:
     """Top-level call: floor → deco → door → objects → player → vignette."""
@@ -87,7 +105,19 @@ def draw_prompt(surf: pygame.Surface, state, nearby_obj) -> None:
 def _draw_deco(surf: pygame.Surface, state) -> None:
     lbl_font = font(12)
     for d in state.current_room.get("deco", []):
-        draw_block(surf, d["x"], d["y"], d["w"], d["h"], d["color"], d["label"], lbl_font)
+        if d["label"] == "Computer Desk":
+            surf.blit(_get_desk("top_left"), (d["x"], d["y"]))
+        else:
+            draw_block(surf, d["x"], d["y"], d["w"], d["h"], d["color"], d["label"], lbl_font)
+
+    # Extra desks only in Room A
+    if state.current_room is ROOM_A:
+        surf.blit(_get_desk("bottom_right"), (200, 47))
+        surf.blit(_get_desk("top_right"),    (325, 40))
+
+        _dark = pygame.Surface((475, 180), pygame.SRCALPHA)
+        _dark.fill((0, 0, 0, 40))
+        surf.blit(_dark, (50, 40))
 
 
 def _draw_objects(surf: pygame.Surface, state) -> None:

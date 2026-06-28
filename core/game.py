@@ -27,6 +27,10 @@ class Game:
         self.state        = GameState()
         self.state.screen = self.screen
 
+        from entities.player import Player
+        self.state.player = Player()
+        self.state.player.load_sprites("assets/images/Walk.png", "assets/images/idle_1.png")
+
     # ── Main loop ─────────────────────────────────────────────────────────────
 
     def run(self) -> None:

@@ -23,11 +23,13 @@ ROOM_A = {
         R(0, 0, 1600, 40), R(0, 860, 1600, 40),
         R(0, 0, 40, 900),  R(1560, 0, 40, 900),
         # Computer desk — top-left against both walls
-        R(50, 40, 120, 110),
+        R(50,  40, 200, 100),   # left desk
+        R(200, 40, 200, 100),   # center desk
+        R(325, 40, 200, 100),   # right desk
         # Whiteboard — top wall, center-left
-        R(380, 40, 460, 100),
+        R(540, 40, 460, 100),
         # Printer — top wall, right of whiteboard
-        R(950, 40, 130, 90),
+        R(1000, 40, 130, 90),
         # File cabinets — top-right
         R(1200, 40, 260, 90),
         # Table/desk collision — center
@@ -47,7 +49,7 @@ ROOM_A = {
         },
         {
             # Whiteboard — top of room, against top wall
-            "id": "whiteboard", "x": 380, "y": 40, "w": 460, "h": 100,
+            "id": "whiteboard", "x": 540, "y": 40, "w": 460, "h": 100,
             "label": "Whiteboard", "color": (233, 236, 239), "kind": "whiteboard",
         },
         {
@@ -60,7 +62,7 @@ ROOM_A = {
         # Computer desk — top-left corner, against left + top walls
         {"x": 50,   "y": 40,  "w": 120, "h": 110, "color": (44, 51, 61),  "label": "Computer Desk"},
         # Printer — right side of whiteboard, against top wall
-        {"x": 950,  "y": 40,  "w": 130, "h": 90,  "color": (35, 38, 43),  "label": "Printer"},
+        {"x": 1000, "y": 40,  "w": 130, "h": 90,  "color": (35, 38, 43),  "label": "Printer"},
         # File cabinets — top-right, against top wall
         {"x": 1200, "y": 40,  "w": 260, "h": 90,  "color": (51, 39, 30),  "label": "File Cabinets"},
         # Sofa — bottom center

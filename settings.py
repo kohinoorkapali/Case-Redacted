@@ -18,9 +18,9 @@ PLAYER_SPEED = 3.4
 DOOR_CODE    = "247"           # the code the player must enter at the keypad
 
 # ── Colour palette ────────────────────────────────────────────────────────────
-INK    = (11,  13,  16)
-PANEL  = (21,  24,  29)
-PANEL2 = (29,  33,  39)
+INK    = (60,  65,  72)
+PANEL  = (75,  82,  92)
+PANEL2 = (90,  98,  108)
 ACCENT = (201, 162, 75)
 ACCENT2= (111, 168, 201)
 RED    = (179, 70,  63)
