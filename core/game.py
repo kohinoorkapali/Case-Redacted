@@ -108,6 +108,7 @@ class Game:
             elif ov == "doc":     interactions.click_doc(s, pos)
             elif ov == "journal": interactions.click_journal(s, pos)
             elif ov == "end":     interactions.close_any_overlay(s)
+            elif ov == "ending":  interactions.click_ending(s, pos)
 
     # ── Update ────────────────────────────────────────────────────────────────
 
@@ -154,10 +155,16 @@ class Game:
         s.player.update(s.input_locked, lambda nx, ny: interactions.can_move(s, nx, ny))
         interactions.check_room_transitions(s)
 
+   # ── Draw ──────────────────────────────────────────────────────────────────
+
     # ── Draw ──────────────────────────────────────────────────────────────────
 
     def _draw(self) -> None:
         s = self.state
+        # Clear the surface first
+        s.surf.fill(BLACK) 
+        
+        # 1. Draw the primary game/scene content
         if s.phase == "menu":
             menu_scene.draw_menu(s.surf, s.rain, s.get_mouse())
         elif s.phase == "video":
@@ -166,7 +173,18 @@ class Game:
             menu_scene.draw_intro(s.surf, s.get_mouse())
         elif s.phase == "playing":
             self._draw_game()
-
+        
+        # 2. Draw active overlays on top (Single Source of Truth)
+        ov = s.active_overlay
+        if   ov == "reading": overlays.draw_reading_panel(s.surf, s)
+        elif ov == "keypad":  overlays.draw_keypad(s.surf, s)
+        elif ov == "tool":    overlays.draw_tool(s.surf, s)
+        elif ov == "doc":     overlays.draw_doc_panel(s.surf, s)
+        elif ov == "journal": overlays.draw_journal(s.surf, s)
+        elif ov == "end":     overlays.draw_end_card(s.surf, s)
+        elif ov == "ending":  overlays.draw_end_card(s.surf, s)
+        
+        
     def _draw_game(self) -> None:
         s   = self.state
         now = pygame.time.get_ticks()
@@ -177,13 +195,13 @@ class Game:
         room_renderer.draw_hud(s.surf, s)
         room_renderer.draw_prompt(s.surf, s, nearby)
 
-        ov = s.active_overlay
-        if   ov == "reading": overlays.draw_reading_panel(s.surf, s)
-        elif ov == "keypad":  overlays.draw_keypad(s.surf, s)
-        elif ov == "tool":    overlays.draw_tool(s.surf, s)
-        elif ov == "doc":     overlays.draw_doc_panel(s.surf, s)
-        elif ov == "journal": overlays.draw_journal(s.surf, s)
-        elif ov == "end":     overlays.draw_end_card(s.surf, s)
+        # ov = s.active_overlay
+        # if   ov == "reading": overlays.draw_reading_panel(s.surf, s)
+        # elif ov == "keypad":  overlays.draw_keypad(s.surf, s)
+        # elif ov == "tool":    overlays.draw_tool(s.surf, s)
+        # elif ov == "doc":     overlays.draw_doc_panel(s.surf, s)
+        # elif ov == "journal": overlays.draw_journal(s.surf, s)
+        # elif ov == "end":     overlays.draw_end_card(s.surf, s)
 
         if now < s.flash_until:
             remaining = s.flash_until - now

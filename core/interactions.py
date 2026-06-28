@@ -119,27 +119,53 @@ def _handle_room_a(state, o: dict) -> None:
 
 def _handle_room_b(state, o: dict) -> None:
     kind = o["kind"]
+    
     if kind == "photoboard":
-        state.tool           = {"mode": "magnifier", "mag_idx": 0, "reveal": ""}
-        state.active_overlay = "tool"
-        state.input_locked   = True
+        # Look for the identifier we know exists in our UV_SPOTS text
+        signature_found = any("KILLER'S SIGNATURE" in s for s in state.flags["uvFound"])
+        
+        if signature_found:
+            state.tool           = {"mode": "magnifier", "mag_idx": 0, "reveal": ""}
+            state.active_overlay = "tool"
+            state.input_locked   = True
+        else:
+            open_reading(state, "EVIDENCE BOARD", "LOCKED", 
+                         "The board is a mess. I need to find the killer's signature under UV light first.")
     elif kind == "uv":
         state.tool           = {"mode": "uv", "mag_idx": 0, "reveal": ""}
         state.active_overlay = "tool"
         state.input_locked   = True
+
     elif kind == "docfiles":
+        # Standard doc puzzle flow
         state.doc_selected   = set()
-        state.doc_msg        = ""
+        state.doc_msg        = "Checking files..."
         state.active_overlay = "doc"
         state.input_locked   = True
+        
     elif kind == "cassette":
         r = READINGS["cassette"]
         open_reading(state, r["title"], r["meta"], r["body"])
+        
+    # ... keep your existing 'herring' and 'doorB' logic ...
     elif kind == "herring":
         open_reading(state, o["label"].upper(), "NOTHING USEFUL", o["text"])
     elif kind == "doorB":
         state.current_room = ROOM_A
         state.player.teleport(100.0, 430.0)
+     
+    elif kind == "terminal":
+        # Final Forensic Integrity Check
+        theory_verified = state.flags.get("docSolved")
+        all_evidence = state.flags.get("evidenceCount", 0) >= 3
+        
+        if theory_verified and all_evidence:
+            state.active_overlay = "ending"
+        else:
+            msg = "Access Denied: Forensic verification incomplete."
+            if not theory_verified: msg += " Need to establish theory."
+            else: msg += f" Evidence missing ({state.flags.get('evidenceCount', 0)}/3)."
+            open_reading(state, "SYSTEM INTEGRITY", "LOCKED", msg)
 
 
 # ── Keypad puzzle ─────────────────────────────────────────────────────────────
@@ -201,6 +227,20 @@ def click_tool(state, pos: tuple) -> None:
     if tool_close_rect().collidepoint(pos):
         close_any_overlay(state)
         return
+
+    if state.tool["mode"] == "magnifier":
+        from ui.overlays import mag_nav_rects
+        from data.puzzle_data import MAG_IMAGES
+        prev_r, next_r = mag_nav_rects()
+        if prev_r.collidepoint(pos) and state.tool["mag_idx"] > 0:
+            state.tool["mag_idx"] -= 1
+            state.tool["reveal"] = ""
+            return
+        if next_r.collidepoint(pos) and state.tool["mag_idx"] < len(MAG_IMAGES) - 1:
+            state.tool["mag_idx"] += 1
+            state.tool["reveal"] = ""
+            return
+
     from data.puzzle_data import TOOL_RECT
     if not TOOL_RECT.collidepoint(pos):
         return
@@ -210,28 +250,59 @@ def click_tool(state, pos: tuple) -> None:
         _click_magnifier(state, mx, my)
     elif state.tool["mode"] == "uv":
         _click_uv(state, mx, my)
-
-
+        
+        
 def _click_magnifier(state, mx: float, my: float) -> None:
-    dist = math.hypot(mx - 450, my - 280)
-    if dist < 90 and state.flags["magCount"] < 3:
-        state.flags["magCount"] += 1
-        idx = state.tool["mag_idx"]
-        state.tool["reveal"] = MAG_IMAGES[idx]["reveal"]
-        if state.flags["magCount"] >= 3:
-            state.tool["reveal"] = "\u201cSomething in these photos doesn't match the report\u2026\u201d"
-        state.tool["mag_idx"] = (idx + 1) % len(MAG_IMAGES)
+    from data.puzzle_data import MAG_IMAGES, TOOL_RECT
 
+    idx  = state.tool["mag_idx"]
+    data = MAG_IMAGES[idx]
 
+    # The click (mx, my) arrives in the 780x440 `inner` rect's local space
+    # (TOOL_RECT-relative, minus the inner offset) — convert to ORIGINAL
+    # photo pixel coords the same way the lens does.
+    inner = pygame.Rect(60, 40, 780, 440)
+    if not inner.collidepoint(mx, my):
+        return
+
+    # Need the photo's real size to map coordinates correctly
+    from ui.overlays import _load_mag_photo
+    photo = _load_mag_photo(idx)
+    if photo is None:
+        return
+    src_w, src_h = photo.get_size()
+
+    rel_x = (mx - inner.x) / inner.width
+    rel_y = (my - inner.y) / inner.height
+    click_src_x = rel_x * src_w
+    click_src_y = rel_y * src_h
+
+    dist = math.hypot(click_src_x - data["spot_x"], click_src_y - data["spot_y"])
+    if dist <= data["spot_r"]:
+        state.tool["reveal"]  = data["reveal"]
+        state.flags[data["flag"]] = True
+
+    evidence_found = [
+        state.flags.get("deskVerified"),
+        state.flags.get("hallwayVerified"),
+        state.flags.get("chairVerified"),
+    ]
+    state.flags["evidenceCount"] = evidence_found.count(True)
+
+    if state.flags["evidenceCount"] >= 3:
+        state.flags["photoSolved"] = True
+        
+        
 def _click_uv(state, mx: float, my: float) -> None:
     for s in UV_SPOTS:
         d = math.hypot(mx - s["x"], my - s["y"])
         if d < 60 and s["text"] not in state.flags["uvFound"]:
             state.flags["uvFound"].add(s["text"])
+            
+            # This logic needs to trigger the flag the photoboard looks for
             prefix = "[TRUE] " if s["true"] else "[UNCONFIRMED] "
             state.tool["reveal"] = prefix + "\u201c" + s["text"] + "\u201d"
-
-
+            
 # ── Document puzzle ───────────────────────────────────────────────────────────
 
 def click_doc(state, pos: tuple) -> None:
@@ -252,17 +323,13 @@ def _submit_doc(state) -> None:
     correct_ids = {d["id"] for d in DOC_LINES if d["correct"]}
     if state.doc_selected == correct_ids:
         state.doc_msg_color = ACCENT2
-        state.doc_msg       = (
-            "These lines hold together. The truth: Arthur reopened case 2-4-7 "
-            "alone, the night someone else came for the file."
-        )
+        state.doc_msg = "Files verified. Official theory established. Accessing photo board..."
         state.flags["docSolved"] = True
-        state.end_card_at        = pygame.time.get_ticks() + 2200
+        state.flags["theoryFormed"] = True  # <--- BRIDGE FLAG
     else:
         state.doc_msg_color = RED
-        state.doc_msg       = "These don't add up. Re-read and try again."
-
-
+        state.doc_msg = "These don't add up. Re-read the notes."
+        
 # ── Reading panel click ───────────────────────────────────────────────────────
 
 def click_reading(state, pos: tuple) -> None:
@@ -272,7 +339,18 @@ def click_reading(state, pos: tuple) -> None:
     if close_btn.collidepoint(pos):
         close_any_overlay(state)
 
+# ── Ending overlay click ──────────────────────────────────────────────────────
 
+def click_ending(state, pos: tuple) -> None:
+    # Trigger the end of the game
+    state.active_overlay = None
+    state.input_locked = False
+    # If you want to actually quit the game:
+    # import sys
+    # sys.exit()
+    print("Investigation terminated. The culprit is watching.")
+    
+    
 # ── Local import needed for keypad cancel rect ────────────────────────────────
 from settings import GAME_W
 

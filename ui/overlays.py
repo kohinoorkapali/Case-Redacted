@@ -122,6 +122,11 @@ def draw_keypad(surf: pygame.Surface, state) -> None:
 def tool_close_rect() -> pygame.Rect:
     return pygame.Rect(TOOL_RECT.right - 120, TOOL_RECT.top - 36, 120, 28)
 
+def mag_nav_rects() -> tuple[pygame.Rect, pygame.Rect]:
+    """Prev/Next arrows for cycling magnifier photos."""
+    prev_r = pygame.Rect(TOOL_RECT.x, TOOL_RECT.bottom + 44, 90, 36)
+    next_r = pygame.Rect(TOOL_RECT.right - 90, TOOL_RECT.bottom + 44, 90, 36)
+    return prev_r, next_r
 
 def draw_tool(surf: pygame.Surface, state) -> None:
     _scrim(surf)
@@ -135,6 +140,13 @@ def draw_tool(surf: pygame.Surface, state) -> None:
     )
     header = font(18, bold=True).render(header_txt, True, ACCENT)   # bigger
     surf.blit(header, (TOOL_RECT.x, TOOL_RECT.y - 36))
+    
+    if state.flags.get("theoryFormed"):
+        count = state.flags.get("evidenceCount", 0)
+        progress_text = f"FORENSIC CORROBORATION: {count} / 3 FOUND"
+        progress = font(14, bold=True).render(progress_text, True, ACCENT2)
+        surf.blit(progress, (TOOL_RECT.x, TOOL_RECT.bottom + 14))
+        
 
     close_btn = tool_close_rect()
     mouse     = state.get_mouse()
@@ -156,6 +168,26 @@ def draw_tool(surf: pygame.Surface, state) -> None:
     reveal = font(16).render(state.tool["reveal"], True, ACCENT2)   # bigger
     surf.blit(reveal, (TOOL_RECT.centerx - reveal.get_width() // 2, TOOL_RECT.bottom + 14))
 
+    if state.tool["mode"] == "magnifier":
+        prev_r, next_r = mag_nav_rects()
+        idx = state.tool["mag_idx"]
+        total = len(MAG_IMAGES)
+
+        def _nav_btn(rect_, label, enabled):
+            hov = rect_.collidepoint(mouse) and enabled
+            bg = (40, 40, 30) if hov else PANEL
+            bd = ACCENT if (hov and enabled) else ((58, 62, 70) if enabled else (40, 38, 32))
+            tx = ACCENT if (hov and enabled) else ((200, 200, 200) if enabled else (70, 70, 70))
+            pygame.draw.rect(surf, bg, rect_)
+            pygame.draw.rect(surf, bd, rect_, 1)
+            t = font(15, bold=True).render(label, True, tx)
+            surf.blit(t, (rect_.centerx - t.get_width() // 2, rect_.centery - t.get_height() // 2))
+
+        _nav_btn(prev_r, "◀ PREV", idx > 0)
+        _nav_btn(next_r, "NEXT ▶", idx < total - 1)
+
+        page_txt = font(14).render(f"Photo {idx + 1} / {total}", True, DIM)
+        surf.blit(page_txt, (TOOL_RECT.centerx - page_txt.get_width() // 2, TOOL_RECT.bottom + 50))
 
 # ── Magnifier images cache ─────────────────────────────────────────────────────
 _mag_photo_cache: dict[int, pygame.Surface | None] = {}
@@ -163,16 +195,15 @@ _mag_photo_cache: dict[int, pygame.Surface | None] = {}
 def _load_mag_photo(idx: int) -> pygame.Surface | None:
     if idx in _mag_photo_cache:
         return _mag_photo_cache[idx]
-    try:
-        path = MAG_IMAGES[idx].get("file", "")
-        if path:
+    path = MAG_IMAGES[idx].get("file", "")
+    img = None
+    if path:
+        try:
             img = pygame.image.load(path).convert()
-            _mag_photo_cache[idx] = img
-            return img
-    except Exception:
-        pass
-    _mag_photo_cache[idx] = None
-    return None
+        except Exception as e:
+            print(f"[mag photo] failed to load {path!r}: {e}")
+    _mag_photo_cache[idx] = img
+    return img
 
 
 def _draw_magnifier_frame(canvas: pygame.Surface, mx: int, my: int, state) -> None:
@@ -181,38 +212,56 @@ def _draw_magnifier_frame(canvas: pygame.Surface, mx: int, my: int, state) -> No
     idx   = state.tool["mag_idx"] % len(MAG_IMAGES)
     data  = MAG_IMAGES[idx]
 
-    # Try to draw the actual photo; fall back to coloured placeholder
+
     photo = _load_mag_photo(idx)
     if photo:
         scaled = pygame.transform.smoothscale(photo, (inner.width, inner.height))
         canvas.blit(scaled, inner.topleft)
-    else:
+    else:    
         pygame.draw.rect(canvas, data["base"], inner)
-        # Draw placeholder film-grain
-        for _ in range(60):
-            px = inner.x + random.uniform(0, inner.width)
-            py = inner.y + random.uniform(0, inner.height)
-            canvas.fill((80, 80, 80), (px, py, 2, 2))
-        # Placeholder label in center
+        
         lbl_c = font(20).render("[ " + data["label"] + " ]", True, (140, 140, 140))
         canvas.blit(lbl_c, (inner.centerx - lbl_c.get_width() // 2,
                              inner.centery - lbl_c.get_height() // 2))
 
     pygame.draw.rect(canvas, (51, 51, 51), inner, 1)
-    lbl = font(16).render(data["label"], True, (160, 160, 160))   # bigger
+    lbl = font(16).render(data["label"], True, (160, 160, 160))
     canvas.blit(lbl, (70, 48))
 
-    # Magnifying glass circle content
-    content = pygame.Surface((140, 140), pygame.SRCALPHA)
-    content.fill((26, 59, 26, 255))
-    pygame.draw.line(content, (153, 204, 51, 255), (0, 70),  (140, 70),  2)
-    pygame.draw.line(content, (153, 204, 51, 255), (70, 0),  (70, 140), 2)
-    lbl2 = font(15, bold=True).render("ANOMALY", True, (207, 238, 238))
-    content.blit(lbl2, (40, 18))
-    content.blit(state.mag_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-    canvas.blit(content, (mx - 70, my - 70))
-    pygame.draw.circle(canvas, (202, 168, 107), (int(mx), int(my)), 70, 3)
+    # ── Magnifying lens: zoom into the photo under the cursor ──────────────
+    lens_r = 70
+    if photo and inner.collidepoint(mx, my):
+        # map cursor pos (in `inner` space) back to ORIGINAL photo pixel space
+        rel_x = (mx - inner.x) / inner.width
+        rel_y = (my - inner.y) / inner.height
+        src_w, src_h = photo.get_size()
+        src_x = rel_x * src_w
+        src_y = rel_y * src_h
 
+        zoom = 2.5
+        sample_r = lens_r / zoom  # radius to sample from the original image
+        sample_rect = pygame.Rect(
+            int(src_x - sample_r), int(src_y - sample_r),
+            int(sample_r * 2), int(sample_r * 2),
+        )
+        # clamp sample rect inside the photo bounds
+        sample_rect.x = max(0, min(sample_rect.x, src_w - sample_rect.w))
+        sample_rect.y = max(0, min(sample_rect.y, src_h - sample_rect.h))
+
+        zoomed = pygame.transform.smoothscale(
+            photo.subsurface(sample_rect), (lens_r * 2, lens_r * 2)
+        )
+        content = pygame.Surface((lens_r * 2, lens_r * 2), pygame.SRCALPHA)
+        content.blit(zoomed, (0, 0))
+        content.blit(state.mag_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        canvas.blit(content, (mx - lens_r, my - lens_r))
+    else:
+        content = pygame.Surface((lens_r * 2, lens_r * 2), pygame.SRCALPHA)
+        content.fill((26, 59, 26, 255))
+        content.blit(state.mag_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        canvas.blit(content, (mx - lens_r, my - lens_r))
+
+    pygame.draw.circle(canvas, (202, 168, 107), (int(mx), int(my)), lens_r, 3)
 
 def _draw_uv_frame(canvas: pygame.Surface, mx: int, my: int, state) -> None:
     canvas.fill((5, 5, 7))
@@ -377,19 +426,25 @@ def draw_journal(surf: pygame.Surface, state) -> None:
 
 def draw_end_card(surf: pygame.Surface, state) -> None:
     _scrim(surf, alpha=250)
-    f_big  = font(60, bold=True)   # bigger
-    f_body = font(19)              # bigger
+    f_big  = font(60, bold=True)
+    f_body = font(19)
 
-    t1 = f_big.render("TO BE CONTINUED", True, ACCENT)
+    t1 = f_big.render("FILE 4-7-2 UPLOADED", True, ACCENT)
     surf.blit(t1, (GAME_W // 2 - t1.get_width() // 2, 330))
 
     body = (
-        "Arthur reopened the case alone, the night someone else came for the file. "
-        "The numbers were never just a filing system — they were the key.\n\n"
-        "Click anywhere or press ESC to keep investigating."
+        "Access Logs: User 'Reeves' has detected your entry. "
+        "The security protocols are initializing.\n\n"
+        "You have uncovered the truth, but the conspiracy runs deeper "
+        "than you imagined. Footsteps are echoing in the hallway.\n\n"
+        "Click anywhere to escape while you still can."
     )
     y = 440
     for line in wrap_text(body, f_body, 720):
         t = f_body.render(line, True, PAPER)
         surf.blit(t, (GAME_W // 2 - t.get_width() // 2, y))
         y += 34
+    
+    prompt = font(16, bold=True).render("CLICK ANYWHERE TO EXIT", True, ACCENT2)
+    surf.blit(prompt, (GAME_W // 2 - prompt.get_width() // 2, 700))
+    
