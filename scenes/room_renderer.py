@@ -11,6 +11,8 @@ All draw_* functions take (surf, state) where *state* is the GameState
 dataclass defined in core/state.py — no direct Game references here.
 """
 
+from os import path
+
 import pygame
 from settings import (
     GAME_W, GAME_H,
@@ -25,7 +27,8 @@ from assets.fonts import font
 
 _DESK_IMGS = {}
 _ASSET_IMGS = {}
-
+_SOFA_IMGS = {}
+_PLANT_IMGS = {}
 
 def _get_desk(variant: str):
     if variant not in _DESK_IMGS:
@@ -47,13 +50,36 @@ def _get_desk(variant: str):
 def _get_asset(name: str, w: int, h: int):
     key = (name, w, h)
     if key not in _ASSET_IMGS:
-        img = pygame.image.load(f"assets/images/{name}.png").convert_alpha()
+        path = f"assets/images/{name}" if "." in name else f"assets/images/{name}.png"
+        img = pygame.image.load(path).convert_alpha()
         # Scale to height, preserve aspect ratio
         orig_w, orig_h = img.get_size()
         scale = h / orig_h
         new_w = int(orig_w * scale)
         _ASSET_IMGS[key] = pygame.transform.scale(img, (new_w, h))
     return _ASSET_IMGS[key]
+
+def _get_sofa(variant: str):
+    if variant not in _SOFA_IMGS:
+        sheet = pygame.image.load("assets/images/sofa.png").convert_alpha()
+        sw = sheet.get_width() // 2
+        sh = sheet.get_height()
+        col = 0 if variant == "down" else 1
+        frame = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        frame.blit(sheet, (0, 0), (col * sw, 0, sw, sh))
+        _SOFA_IMGS[variant] = pygame.transform.scale(frame, (280, int(sh * 280 / sw)))
+    return _SOFA_IMGS[variant]
+
+def _get_plant(index: int):
+    if index not in _PLANT_IMGS:
+        sheet = pygame.image.load("assets/images/plants.png").convert_alpha()
+        sw = sheet.get_width() // 6
+        sh = sheet.get_height()
+        frame = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        frame.blit(sheet, (0, 0), (index * sw, 0, sw, sh))
+        frame.set_colorkey(frame.get_at((0, 0)))
+        _PLANT_IMGS[index] = pygame.transform.scale(frame, (60, 160))
+    return _PLANT_IMGS[index]
 
 def draw_room(surf: pygame.Surface, state) -> None:
     """Top-level call: floor → deco → door → objects → player → vignette."""
@@ -117,11 +143,26 @@ def draw_prompt(surf: pygame.Surface, state, nearby_obj) -> None:
 
 def _draw_deco(surf: pygame.Surface, state) -> None:
     lbl_font = font(12)
+    sofa_down_drawn = False
     for d in state.current_room.get("deco", []):
         if d["label"] == "Computer Desk":
             surf.blit(_get_desk("top_left"), (d["x"], d["y"]))
         elif d["label"] == "File Cabinets":
             surf.blit(_get_asset("file_cabinet", 240, 220), (d["x"], d["y"]))
+        elif d["label"] == "Water Cooler":
+            surf.blit(_get_asset("water_cooler", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "Printer":
+            surf.blit(_get_asset("printer", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "Sofa":
+            variant = "down" if not sofa_down_drawn else "up"
+            sofa_down_drawn = True
+            surf.blit(_get_sofa(variant), (d["x"], d["y"]))
+        elif d["label"] == "Coffee Station":
+            surf.blit(_get_asset("coffee.png", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "Plant":
+            surf.blit(_get_plant(d["variant"]), (d["x"], d["y"]))
+        elif d["label"] == "Stacked Boxes":
+            surf.blit(_get_asset("stacked_boxes.png", d["w"], d["h"]), (d["x"], d["y"]))
         else:
             draw_block(surf, d["x"], d["y"], d["w"], d["h"], d["color"], d["label"], lbl_font)
 
@@ -142,6 +183,12 @@ def _draw_objects(surf: pygame.Surface, state) -> None:
             surf.blit(_get_asset("whiteboard", 660, 120), (o["x"], o["y"]))
         elif o["id"] in ("cabinet1", "cabinet2"):
             surf.blit(_get_asset("file_cabinet", o["w"], o["h"]), (o["x"], o["y"]))
+        elif o["id"] == "newspaper":
+            surf.blit(_get_asset("newspaper_2.png", o["w"], o["h"]), (o["x"], o["y"]))
+        elif o["id"] == "desk":
+            img = _get_asset("authur_chair.png", o["w"], o["h"])
+            scaled = pygame.transform.scale(img, (int(img.get_width() * 1.5), int(img.get_height() * 1.5)))
+            surf.blit(scaled, (o["x"], o["y"] - 40))
         else:
             draw_block(surf, o["x"], o["y"], o["w"], o["h"], o["color"], o["label"], lbl_font)
         if o["id"] == "desk" and not state.flags["doorUnlocked"]:
