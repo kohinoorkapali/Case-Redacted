@@ -86,6 +86,7 @@ ROOM_A = {
         {"x": 870, "y": 60, "w": 60, "h": 80, "color": (30, 80, 30), "label": "Plant", "variant": 4},
         {"x": 50,   "y": 720, "w": 60, "h": 80, "color": (30, 80, 30), "label": "Plant", "variant": 1},
 
+        
     ],
 }
 
@@ -94,56 +95,62 @@ ROOM_B = {
     "walls": [
         R(0, 0, 1600, 40), R(0, 860, 1600, 40),
         R(0, 0, 40, 900),  R(1560, 0, 40, 900),
-        R(120, 140, 420, 60),
-        R(620, 140, 260, 70),
         R(1000, 150, 90, 90),
         R(1200, 150, 90, 90),
         R(1320, 400, 160, 90),
         R(120, 650, 160, 90),
+        # AC Side
+        R(40, 580, 120, 120),
+        # Locker
+        R(1390, 40, 80, 75),
+        # Small Locker
+        R(1480, 40, 60, 75),
+        # Interactive object collisions
+        R(590, 560, 200, 130),   # photoboard
+        R(910, 560, 240, 130),   # uvdesk
+        R(1265, 590, 190, 100),  # cassette
+        R(200, 560, 240, 130),   # docfiles
+        R(640, 120, 180, 60),   #termianl
     ],
     "door": R(1530, 380, 30, 140),
-    "objects": [
+     "objects": [
         {
-            "id": "photoboard", "x": 560, "y": 560, "w": 230, "h": 130,
+            "id": "photoboard", "x": 560, "y": 530, "w": 370, "h": 210,
             "label": "Photo Board (Magnifier)", "color": (202, 168, 107), "kind": "photoboard",
         },
         {
-            "id": "uvdesk", "x": 900, "y": 560, "w": 200, "h": 130,
+            "id": "uvdesk", "x": 880, "y": 530, "w": 320, "h": 210,
             "label": "UV Inspection Desk", "color": (39, 56, 74), "kind": "uv",
         },
         {
-            "id": "cassette", "x": 1260, "y": 600, "w": 160, "h": 90,
+            "id": "cassette", "x": 1240, "y": 570, "w": 260, "h": 150,
             "label": "Cassette Table", "color": (58, 42, 29), "kind": "cassette",
         },
         {
-            "id": "docfiles", "x": 200, "y": 560, "w": 200, "h": 120,
+            "id": "docfiles", "x": 170, "y": 530, "w": 320, "h": 200,
             "label": "Document Files", "color": (64, 74, 58), "kind": "docfiles",
         },
         {
-            "id": "terminal", "x": 650, "y": 160, "w": 200, "h": 50,
+            "id": "terminal", "x": 600, "y": 80, "w": 240, "h": 160,
             "label": "Broken Terminal", "color": (34, 34, 34), "kind": "herring",
             "text": "SYSTEM OFFLINE. No data recoverable.",
         },
         {
-            "id": "cabinet1", "x": 1010, "y": 160, "w": 70, "h": 70,
+            "id": "cabinet1", "x": 1000, "y": 40, "w": 220, "h": 200,
             "label": "File Cabinet", "color": (42, 33, 24), "kind": "herring",
             "text": "Locked. Not your case.",
         },
         {
-            "id": "cabinet2", "x": 1210, "y": 160, "w": 70, "h": 70,
+            "id": "cabinet2", "x": 1200, "y": 40, "w": 220, "h": 200,
             "label": "File Cabinet", "color": (42, 33, 24), "kind": "herring",
             "text": "Locked. Rust on the hinges.",
         },
-        {
-            "id": "storage", "x": 1340, "y": 410, "w": 120, "h": 70,
-            "label": "Chairs / Storage", "color": (38, 38, 38), "kind": "herring",
-            "text": "Old furniture. Nothing of interest.",
-        },
-        {
-            "id": "coffee", "x": 140, "y": 660, "w": 120, "h": 70,
-            "label": "Coffee Cups", "color": (59, 42, 26), "kind": "herring",
-            "text": "Cold coffee. Work left unfinished.",
-        },
+        
     ],
-    "deco": [],
+    "deco": [
+        {"x": 40, "y": 250, "w": 120, "h": 450, "color": (70, 70, 80), "label": "AC Side"},
+        {"x": 130, "y": 40, "w": 80, "h": 150, "color": (70, 70, 80), "label": "AC"},
+        {"x": 1390, "y": 40, "w": 80, "h": 150, "color": (70, 70, 80), "label": "Locker"},
+        {"x": 1480, "y": 40, "w": 60, "h": 150, "color": (70, 70, 80), "label": "Small Locker"},
+    ],
 }
