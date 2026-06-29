@@ -163,6 +163,14 @@ def _draw_deco(surf: pygame.Surface, state) -> None:
             surf.blit(_get_plant(d["variant"]), (d["x"], d["y"]))
         elif d["label"] == "Stacked Boxes":
             surf.blit(_get_asset("stacked_boxes.png", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "AC Side":
+            surf.blit(_get_asset("side.png", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "AC":
+            surf.blit(_get_asset("Ac.png", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "Locker":
+            surf.blit(_get_asset("locker.png", d["w"], d["h"]), (d["x"], d["y"]))
+        elif d["label"] == "Small Locker":
+            surf.blit(_get_asset("small_locker.png", d["w"], d["h"]), (d["x"], d["y"]))
         else:
             draw_block(surf, d["x"], d["y"], d["w"], d["h"], d["color"], d["label"], lbl_font)
 
@@ -189,6 +197,16 @@ def _draw_objects(surf: pygame.Surface, state) -> None:
             img = _get_asset("authur_chair.png", o["w"], o["h"])
             scaled = pygame.transform.scale(img, (int(img.get_width() * 1.5), int(img.get_height() * 1.5)))
             surf.blit(scaled, (o["x"], o["y"] - 40))
+        elif o["id"] == "terminal":
+            surf.blit(_get_asset("broken_terminal.png", o["w"], o["h"]), (o["x"], o["y"]))
+        elif o["id"] == "photoboard":
+            surf.blit(_get_asset("Magnifier.png", o["w"], o["h"]), (o["x"], o["y"]))
+        elif o["id"] == "uvdesk":
+            surf.blit(_get_asset("uv-desk.png", o["w"], o["h"]), (o["x"], o["y"]))
+        elif o["id"] == "cassette":
+            surf.blit(_get_asset("cassete_desk.png", o["w"], o["h"]), (o["x"], o["y"]))
+        elif o["id"] == "docfiles":
+            surf.blit(_get_asset("scattere_table.png", o["w"], o["h"]), (o["x"], o["y"]))
         else:
             draw_block(surf, o["x"], o["y"], o["w"], o["h"], o["color"], o["label"], lbl_font)
         if o["id"] == "desk" and not state.flags["doorUnlocked"]:
