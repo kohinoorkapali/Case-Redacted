@@ -11,10 +11,13 @@ from __future__ import annotations
 import math
 import pygame
 
+import systems.sound as sound
+
 from settings import DOOR_CODE, ACCENT2, RED, DIM
 from data.rooms import ROOM_A, ROOM_B
 from data.puzzle_data import MAG_IMAGES, UV_SPOTS, DOC_LINES, READINGS
 from ui.overlays import keypad_button_layout, doc_line_layout, tool_close_rect
+
 
 
 # ── Overlay open/close ────────────────────────────────────────────────────────
@@ -26,9 +29,12 @@ def open_reading(state, title: str, meta: str, body: str) -> None:
 
 
 def close_any_overlay(state) -> None:
-    state.active_overlay= None
-    state.input_locked  = False
-
+    if state.tool.get("mode") == "uv":
+        sound.stop_loop()
+    if state.active_overlay == "journal":
+        sound.stop_journal()
+    state.active_overlay = None
+    state.input_locked   = False
 
 # ── Collision + room transitions ──────────────────────────────────────────────
 
@@ -63,7 +69,7 @@ def _enter_room_b(state) -> None:
     state.player.teleport(80.0, 430.0)
     state.flags["doorUnlocked"] = True
     state.current_room          = ROOM_B
-
+    sound.play("dooropen")
 
 # ── Nearby object detection ───────────────────────────────────────────────────
 
@@ -103,6 +109,7 @@ def _handle_room_a(state, o: dict) -> None:
         r = READINGS["newspaper"]
         open_reading(state, r["title"], r["meta"], r["body"])
         state.flags["readNewspaper"] = True
+        sound.play("newspaper")
     elif kind == "whiteboard":
         r = READINGS["whiteboard"]
         open_reading(state, r["title"], r["meta"], r["body"])
@@ -110,6 +117,8 @@ def _handle_room_a(state, o: dict) -> None:
     elif kind == "desk":
         state.flags["sawDesk"] = True
         open_journal(state)
+        sound.play_once_on_channel("journal", channel_id=6, volume=0.7)
+        
     elif kind == "doorA":
         if state.flags["doorUnlocked"]:
             _enter_room_b(state)
@@ -135,6 +144,7 @@ def _handle_room_b(state, o: dict) -> None:
         state.tool           = {"mode": "uv", "mag_idx": 0, "reveal": ""}
         state.active_overlay = "tool"
         state.input_locked   = True
+        sound.start_loop("static", volume=0.4)
 
     elif kind == "docfiles":
         # Standard doc puzzle flow
@@ -147,7 +157,7 @@ def _handle_room_b(state, o: dict) -> None:
         r = READINGS["cassette"]
         open_reading(state, r["title"], r["meta"], r["body"])
         
-    # ... keep your existing 'herring' and 'doorB' logic ...
+        
     elif kind == "herring":
         open_reading(state, o["label"].upper(), "NOTHING USEFUL", o["text"])
     elif kind == "doorB":
@@ -203,6 +213,7 @@ def _press_digit(state, d: str) -> None:
     if len(kp["code"]) >= 3:
         return
     kp["code"] += d
+    sound.play("click")
     if len(kp["code"]) == 3:
         kp["submit_at"] = pygame.time.get_ticks() + 150
 
@@ -214,11 +225,13 @@ def _submit_code(state) -> None:
         kp["hint"]                  = "CLICK."
         state.flash_until            = now + 90
         kp["close_at"]              = now + 350
-        state.flags["doorUnlocked"] = True   # unlock so player can walk through
+        state.flags["doorUnlocked"] = True
+        sound.play("confirm")
     else:
         kp["shake_until"] = now + 400
         kp["hint"]        = "Something feels inverted\u2026"
         kp["clear_at"]    = now + 400
+        sound.play("error")
 
 
 # ── Tool panel clicks ─────────────────────────────────────────────────────────
@@ -235,10 +248,12 @@ def click_tool(state, pos: tuple) -> None:
         if prev_r.collidepoint(pos) and state.tool["mag_idx"] > 0:
             state.tool["mag_idx"] -= 1
             state.tool["reveal"] = ""
+            sound.play("click")
             return
         if next_r.collidepoint(pos) and state.tool["mag_idx"] < len(MAG_IMAGES) - 1:
             state.tool["mag_idx"] += 1
             state.tool["reveal"] = ""
+            sound.play("click")
             return
 
     from data.puzzle_data import TOOL_RECT
@@ -258,9 +273,7 @@ def _click_magnifier(state, mx: float, my: float) -> None:
     idx  = state.tool["mag_idx"]
     data = MAG_IMAGES[idx]
 
-    # The click (mx, my) arrives in the 780x440 `inner` rect's local space
-    # (TOOL_RECT-relative, minus the inner offset) — convert to ORIGINAL
-    # photo pixel coords the same way the lens does.
+   
     inner = pygame.Rect(60, 40, 780, 440)
     if not inner.collidepoint(mx, my):
         return
@@ -281,6 +294,7 @@ def _click_magnifier(state, mx: float, my: float) -> None:
     if dist <= data["spot_r"]:
         state.tool["reveal"]  = data["reveal"]
         state.flags[data["flag"]] = True
+        sound.play("magnifier")
 
     evidence_found = [
         state.flags.get("deskVerified"),
@@ -313,6 +327,7 @@ def click_doc(state, pos: tuple) -> None:
                 state.doc_selected.discard(d["id"])
             else:
                 state.doc_selected.add(d["id"])
+            sound.play("click")
             return
     submit = pygame.Rect(panel.x + 36, panel.bottom - 70, 240, 40)
     if submit.collidepoint(pos):
@@ -325,10 +340,12 @@ def _submit_doc(state) -> None:
         state.doc_msg_color = ACCENT2
         state.doc_msg = "Files verified. Official theory established. Accessing photo board..."
         state.flags["docSolved"] = True
-        state.flags["theoryFormed"] = True  # <--- BRIDGE FLAG
+        state.flags["theoryFormed"] = True
+        sound.play("confirm")
     else:
         state.doc_msg_color = RED
         state.doc_msg = "These don't add up. Re-read the notes."
+        sound.play("error")
         
 # ── Reading panel click ───────────────────────────────────────────────────────
 
@@ -345,9 +362,7 @@ def click_ending(state, pos: tuple) -> None:
     # Trigger the end of the game
     state.active_overlay = None
     state.input_locked = False
-    # If you want to actually quit the game:
-    # import sys
-    # sys.exit()
+   
     print("Investigation terminated. The culprit is watching.")
     
     
@@ -358,9 +373,7 @@ from settings import GAME_W
 # ── Journal overlay ────────────────────────────────────────────────────────────
 
 def open_journal(state) -> None:
-    from data.puzzle_data import JOURNAL_PAGES
-    # Start on last page (the "current" final note)
-    state.journal_page   = len(JOURNAL_PAGES) - 1
+    state.journal_page   = 0
     state.active_overlay = "journal"
     state.input_locked   = True
 
