@@ -43,6 +43,7 @@ _VIDEO_CANDIDATES = [
     "intro_case_redacted.mp4",
 ]
 
+_show_credits_screen = False
 
 def _try_load_video() -> bool:
     """Load video frames and extract audio to temp_audio.mp3 via moviepy.
@@ -268,6 +269,104 @@ def video_finished() -> bool:
         _stop_video_audio()
     return finished
 
+# ── Cutscene video player (case_redact_2 → case_redact_3) ────────────────────
+
+_CUTSCENE_FRAMES: list[pygame.Surface] = []
+_CUTSCENE_FPS    = 24.0
+_cutscene_idx    = 0
+_next_cutscene_at= 0
+_cutscene_queue: list[str] = []
+
+def _load_cutscene(filepath: str) -> bool:
+    global _CUTSCENE_FRAMES, _CUTSCENE_FPS, _cutscene_idx, _next_cutscene_at
+    _CUTSCENE_FRAMES = []
+    _cutscene_idx    = 0
+    _next_cutscene_at= 0
+    try:
+        import cv2
+
+        # ── Extract audio using unique filename ───────────────────
+        audio_tmp = filepath.replace(".mp4", "_audio.mp3").replace("assets/videos/", "")
+        try:
+            from moviepy.editor import VideoFileClip
+            pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            clip = VideoFileClip(filepath)
+            if clip.audio:
+                clip.audio.write_audiofile(audio_tmp, verbose=False, logger=None)
+            clip.close()
+        except Exception as e:
+            print(f"[cutscene] audio extract failed: {e}")
+            audio_tmp = None
+
+        # ── Extract frames via cv2 ────────────────────────────────
+        cap = cv2.VideoCapture(filepath)
+        fps_raw = cap.get(cv2.CAP_PROP_FPS)
+        if fps_raw and fps_raw > 0:
+            _CUTSCENE_FPS = fps_raw
+        frames = []
+        while True:
+            ok, frame = cap.read()
+            if not ok:
+                break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(pygame.surfarray.make_surface(frame.swapaxes(0, 1)))
+        cap.release()
+
+        if not frames:
+            return False
+
+        _CUTSCENE_FRAMES = frames
+
+        # ── Play audio ────────────────────────────────────────────
+        if audio_tmp and os.path.exists(audio_tmp):
+            try:
+                pygame.mixer.music.load(audio_tmp)
+                pygame.mixer.music.play()
+            except Exception as e:
+                print(f"[cutscene] audio play failed: {e}")
+
+        return True
+    except Exception as e:
+        print(f"[cutscene] failed to load {filepath}: {e}")
+        return False
+
+def start_cutscene_queue(paths: list[str]) -> bool:
+    """Load and begin playing the first video in paths; queue the rest."""
+    global _cutscene_queue
+    _cutscene_queue = list(paths)
+    return _advance_cutscene_queue()
+
+def _advance_cutscene_queue() -> bool:
+    global _cutscene_queue
+    while _cutscene_queue:
+        p = _cutscene_queue.pop(0)
+        if _load_cutscene(p):
+            return True
+    return False
+
+def draw_cutscene(surf: pygame.Surface) -> None:
+    global _cutscene_idx, _next_cutscene_at
+    now = pygame.time.get_ticks()
+    if now >= _next_cutscene_at:
+        _cutscene_idx   += 1
+        _next_cutscene_at = now + int(1000 / _CUTSCENE_FPS)
+    if _CUTSCENE_FRAMES:
+        idx   = min(_cutscene_idx, len(_CUTSCENE_FRAMES) - 1)
+        frame = pygame.transform.smoothscale(_CUTSCENE_FRAMES[idx], (GAME_W, GAME_H))
+        surf.blit(frame, (0, 0))
+
+def cutscene_finished() -> bool:
+    if not _CUTSCENE_FRAMES:
+        return True
+    if _cutscene_idx >= len(_CUTSCENE_FRAMES) - 1:
+        if _cutscene_queue:
+            pygame.mixer.music.stop()
+            _advance_cutscene_queue()
+            return False
+        pygame.mixer.music.stop()
+        return True
+    return False
 
 def click_intro(pos: tuple) -> str | None:
     if intro_skip_rect().collidepoint(pos):
@@ -288,3 +387,15 @@ def reset_video() -> None:
         _try_load_video()
 
     _play_video_audio()
+
+def draw_credits_menu(surf: pygame.Surface, rain: list) -> None:
+    surf.fill((10, 11, 13))
+    draw_rain(surf, rain)
+    title_font = font(64, bold=True)
+    title  = title_font.render("CASE ",    True, PAPER)
+    title2 = title_font.render("REDACTED", True, RED)
+    total_w = title.get_width() + title2.get_width()
+    tx = GAME_W // 2 - total_w // 2
+    ty = GAME_H // 2 - title.get_height() // 2
+    surf.blit(title,  (tx, ty))
+    surf.blit(title2, (tx + title.get_width(), ty))

@@ -33,10 +33,10 @@ def draw_reading_panel(surf: pygame.Surface, state) -> None:
     panel = pygame.Rect(GAME_W // 2 - 380, 130, 760, 560)
     draw_panel_box(surf, panel, PANEL, border_color=(51, 54, 61), accent_left=ACCENT)
 
-    f_title = font(24, bold=True)   # bigger
-    f_meta  = font(15)              # bigger
-    f_body  = font(19)              # bigger
-    f_close = font(16, bold=True)   # bigger
+    f_title = font(34, bold=True)
+    f_meta  = font(24)
+    f_body  = font(22)
+    f_close = font(16, bold=True)
 
     title = f_title.render(state.reading["title"], True, ACCENT)
     surf.blit(title, (panel.x + 36, panel.y + 28))
@@ -292,8 +292,8 @@ def _draw_uv_frame(canvas: pygame.Surface, mx: int, my: int, state) -> None:
 # ── Document puzzle panel ─────────────────────────────────────────────────────
 
 def doc_line_layout(state) -> tuple[pygame.Rect, list]:
-    panel  = pygame.Rect(GAME_W // 2 - 410, 160, 820, 560)
-    f_line = font(17)   # bigger
+    panel  = pygame.Rect(GAME_W // 2 - 480, 100, 960, 660)
+    f_line = font(20) # bigger
     rects  = []
     y = panel.y + 90
     for d in DOC_LINES:
@@ -309,16 +309,16 @@ def draw_doc_panel(surf: pygame.Surface, state) -> None:
     panel, rects = doc_line_layout(state)
     draw_panel_box(surf, panel, PANEL, border_color=(51, 54, 61), accent_left=ACCENT2)
 
-    f_title = font(22, bold=True)   # bigger
-    f_meta  = font(14)              # bigger
-    f_line  = font(17)              # bigger
-    f_msg   = font(15)              # bigger
+    f_title = font(34, bold=True)
+    f_meta  = font(20)
+    f_line  = font(23)
+    f_msg   = font(21)
 
     title = f_title.render("DOCUMENT FILES — SELECT THE TRUTH", True, ACCENT2)
     surf.blit(title, (panel.x + 36, panel.y + 24))
     meta = f_meta.render(
         "Choose the 3 lines that form a consistent account. Click to select, click again to deselect.",
-        True, DIM,
+        True, (160, 160, 160),
     )
     surf.blit(meta, (panel.x + 36, panel.y + 24 + title.get_height() + 6))
 
@@ -334,16 +334,23 @@ def draw_doc_panel(surf: pygame.Surface, state) -> None:
         pygame.draw.rect(surf, border_color, rect_, 1)
         ty = rect_.y + 10
         for line in lines:
-            t = f_line.render(line, True, PAPER if selected else TEXT)
+            t = font(20, bold=True).render(line, True, PAPER if selected else (220, 220, 220))
             surf.blit(t, (rect_.x + 14, ty))
             ty += 24
 
-    submit = pygame.Rect(panel.x + 36, panel.bottom - 70, 260, 44)
+    submit = pygame.Rect(panel.x + 36, panel.bottom - 100, 260, 44)
     hover  = submit.collidepoint(mouse)
     pygame.draw.rect(surf, (40, 40, 30) if hover else PANEL, submit)
     pygame.draw.rect(surf, ACCENT, submit, 1)
     t = font(15, bold=True).render("CONFIRM SELECTION", True, ACCENT)
     surf.blit(t, (submit.centerx - t.get_width() // 2, submit.centery - t.get_height() // 2))
+
+    cancel = pygame.Rect(panel.x + 36 + 280, panel.bottom - 100, 160, 44)
+    chov   = cancel.collidepoint(mouse)
+    pygame.draw.rect(surf, (80, 30, 30) if chov else (50, 20, 20), cancel)
+    pygame.draw.rect(surf, (220, 60, 60), cancel, 2)
+    ct = font(15, bold=True).render("CANCEL", True, (220, 60, 60))
+    surf.blit(ct, (cancel.centerx - ct.get_width() // 2, cancel.centery - ct.get_height() // 2))
 
     if state.doc_msg:
         my_ = submit.bottom + 10

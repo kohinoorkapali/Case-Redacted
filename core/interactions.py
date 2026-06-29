@@ -329,9 +329,12 @@ def click_doc(state, pos: tuple) -> None:
                 state.doc_selected.add(d["id"])
             sound.play("click")
             return
-    submit = pygame.Rect(panel.x + 36, panel.bottom - 70, 240, 40)
+    submit = pygame.Rect(panel.x + 36, panel.bottom - 70, 260, 44)
     if submit.collidepoint(pos):
         _submit_doc(state)
+    cancel = pygame.Rect(panel.x + 36 + 280, panel.bottom - 70, 160, 44)
+    if cancel.collidepoint(pos):
+        close_any_overlay(state)
 
 
 def _submit_doc(state) -> None:
@@ -342,6 +345,25 @@ def _submit_doc(state) -> None:
         state.flags["docSolved"] = True
         state.flags["theoryFormed"] = True
         sound.play("confirm")
+        # ── trigger cutscene sequence ──────────────────────────────
+       
+        import os
+        import scenes.menu as menu_scene
+        v2 = os.path.join("assets", "videos", "case_redact_2.mp4")
+        v3 = os.path.join("assets", "videos", "case_redact_3.mp4")
+        print(f"[cutscene] v2 exists: {os.path.exists(v2)}, path: {os.path.abspath(v2)}")
+        print(f"[cutscene] v3 exists: {os.path.exists(v3)}, path: {os.path.abspath(v3)}")
+        if menu_scene.start_cutscene_queue([v2, v3]):
+            state.active_overlay   = None
+            state.input_locked     = False
+            state.pending_cutscene = True
+        else:
+            print("[cutscene] FAILED - start_cutscene_queue returned False")
+        if menu_scene.start_cutscene_queue([v2, v3]):
+            state.active_overlay   = None
+            state.input_locked     = False
+            state.pending_cutscene = True
+        # ──────────────────────────────────────────────────────────
     else:
         state.doc_msg_color = RED
         state.doc_msg = "These don't add up. Re-read the notes."

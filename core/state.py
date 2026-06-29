@@ -81,6 +81,7 @@ class GameState:
         self.flash_until: int = 0
         self.shake_until: int = 0
         self.end_card_at: int | None = None
+        self.pending_cutscene = False
 
     def reset(self) -> None:
         """Return everything to its start-of-game defaults."""

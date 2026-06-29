@@ -116,19 +116,31 @@ class Game:
         s   = self.state
         now = pygame.time.get_ticks()
 
-        if s.phase == "menu":
+        if s.phase in ("menu", "credits"):
             for drop in s.rain:
                 drop.update(dt)
             return
-
+        
         if s.phase == "video":
-            # auto-advance to intro when video ends
             if menu_scene.video_finished():
                 s.phase = "intro"
             return
 
+        if s.pending_cutscene:
+            s.pending_cutscene = False
+            s.phase = "cutscene"
+            return
+
+        if s.phase == "cutscene":
+            if menu_scene.cutscene_finished():
+                s.phase = "credits"
+                s.active_overlay = None
+                s.input_locked   = False
+            return
+
         if s.phase != "playing":
             return
+        
 
         # keypad auto-submit / auto-clear timers
         kp = s.keypad
@@ -171,6 +183,10 @@ class Game:
             menu_scene.draw_video(s.surf, s.get_mouse())
         elif s.phase == "intro":
             menu_scene.draw_intro(s.surf, s.get_mouse())
+        elif s.phase == "cutscene":
+            menu_scene.draw_cutscene(s.surf)
+        elif s.phase == "credits":
+            menu_scene.draw_credits_menu(s.surf, s.rain)
         elif s.phase == "playing":
             self._draw_game()
         
